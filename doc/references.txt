@@ -1,0 +1,28 @@
+CD-ROM Reference Specifications:
+
+  - ECMA 130
+    Documents physical characteristics and data layout for 120mm CD-ROMs
+    http://www.ecma-international.org/publications/standards/Ecma-130.htm
+
+  - SCSI MMC Specifications
+    Describes SCSI packet interface for communicating with CD-ROM drives
+    No longer freely available, but some draft revisions can be found on the
+    web.
+
+  - SFF 8020i
+    Documents CD-ROM ATAPI commands
+    The ATAPI commands are essentially equivalent to the SCSI MMC commands.
+    Draft revisions can easily be found on the web;
+    SFF-8090 seems to contain a superset of this information.
+
+  - SFF 8090i (aka Mt. Fuji)
+    Also documents CD-ROM ATAPI commands
+    ftp://ftp.seagate.com/sff/INF-8090.PDF
+
+  - ECMA 119 (equivalent to ISO 9660:1988)
+    Documents CD-ROM filesystem (aka ISO) format
+    http://www.ecma-international.org/publications/standards/Ecma-119.htm
+
+  - El Torito
+    Documents bootable CD-ROM format
+    http://www.phoenix.com/NR/rdonlyres/98D3219C-9CC9-4DF5-B496-A286D893E36A/0/specscdrom.pdf
