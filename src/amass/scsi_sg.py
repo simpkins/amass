@@ -26,6 +26,9 @@ STATUS_RESERVATION_CONFLICT = 0x18
 STATUS_COMMAND_TERMINATED = 0x22
 STATUS_QUEUE_FULL = 0x28
 
+ERROR_CURRENT = 0x70
+ERROR_DEFERRED = 0x71
+
 SENSE_NONE = 0x0
 SENSE_RECOVERED_ERROR = 0x1
 SENSE_NOT_READY = 0x2
@@ -42,6 +45,10 @@ SENSE_EQUAL = 0xc
 SENSE_VOLUME_OVERFLOW = 0xd
 SENSE_MISCOMPARE = 0xe
 SENSE_RESERVED = 0xf
+
+# Values for additional sense code
+SENSE_ADDL_ILLEGAL_CDB_FIELD = 0x24
+SENSE_ADDL_ILLEGAL_MODE_FOR_TRACK = 0x64
 
 
 def get_status_string(status):
@@ -77,6 +84,7 @@ class ScsiError(Exception):
 class CheckConditionError(ScsiError):
     def __init__(self, sense):
         ScsiError.__init__(self, STATUS_CHECK_CONDITION)
+        # self.sense is a cbuf.CBuffer object.
         self.sense = sense
 
     def __str__(self):
@@ -101,10 +109,99 @@ class CheckConditionError(ScsiError):
                 idx = (x * 16) + y
                 if idx >= len(self.sense):
                     break
-                row.append('%02x ' % (ord(self.sense[idx]),))
+                row.append('%02x ' % (self.sense.getU8(idx),))
             out.append(' '.join(row))
 
         return out
+
+
+class StdCheckConditionError(CheckConditionError):
+    def __init__(self, sense):
+        CheckConditionError.__init__(self, sense)
+        assert len(self.sense) >= 13
+        # XXX: Ignore the valid bit for now.  See my comment in
+        # raise_check_condition_err().
+        #assert self.valid
+        assert (self.error == ERROR_CURRENT or self.error == ERROR_DEFERRED)
+
+    @property
+    def valid(self):
+        return bool((self.sense.getU8(0) >> 7) & 0x1)
+
+    @property
+    def error(self):
+        return self.sense.getU8(0) & 0x7f
+
+    @property
+    def segmentNumber(self):
+        return self.sense.getU8(1)
+
+    @property
+    def incorrectLengthIndicator(self):
+        return bool((self.sense.getU8(2) >> 6) & 0x1)
+
+    @property
+    def senseKey(self):
+        return (self.sense.getU8(2) & 0x0f)
+
+    @property
+    def information(self):
+        # command specific, but an LBA unless otherwise specified
+        return self.sense.getU32BE(3)
+
+    @property
+    def additionalSenseLength(self):
+        return self.sense.getU8(7)
+
+    @property
+    def cmdSpecificInfo(self):
+        # command specific
+        return self.sense.getU32BE(8)
+
+    @property
+    def additionalSenseCode(self):
+        return self.sense.getU8(12)
+
+
+def raise_check_condition_err(sense):
+    """
+    Raise a StdCheckConditionError if we know how to parse the sense buffer,
+    or a generic CheckConditionError otherwise.
+
+    sense should be a cbuf.CBuffer.
+    """
+    # We require at least 13 bytes for a standard sense buffer layout
+    #
+    # In practice, the standard length is normally at least 18 bytes.
+    # The Mt. Fuji spec says fields after byte 13 are optional, though.
+    # (Since the T10 committee has restricted access to the SPC-x spec, I can't
+    # confirm this authoritatively.)
+    #
+    # Raise a StdCheckConditionError if we don't have enough data for it to
+    # possibly be the standard format.
+    if len(sense) < 13:
+        raise CheckConditionError(sense)
+
+    # XXX: Hmm.  The drive I'm testing with (an LG 22x DVD +/- R drive)
+    # doesn't set the valid bit, even though it is using the standard format.
+    # As far as I can tell, it doesn't look like the Linux kernel strips the
+    # valid bit, so it seems like the drive really doesn't set it.
+    #
+    # Ignore the valid bit for now.
+    #
+    #valid = bool((sense.getU8(0) >> 7) & 0x1)
+    #if not valid:
+    #    # Format is not defined by the specification.
+    #    # Return a generic CheckConditionError
+    #    raise CheckConditionError(sense)
+
+    error = sense.getU8(0) & 0x7f
+    if error == ERROR_CURRENT or error == ERROR_DEFERRED:
+        # These use the standard format sense buffer
+        raise StdCheckConditionError(sense)
+    else:
+        # Unknown format
+        raise CheckConditionError(sense)
 
 
 class SgIoHdr(ctypes.Structure):
@@ -240,10 +337,10 @@ def sg_cmd(fd, direction, cmd, dxfer, sense_len=0xff, timeout=5000):
 
     # Raise an exception if the status is not STATUS_SUCCESS
     if sg_io_hdr.status == STATUS_CHECK_CONDITION:
-        if sense is not None:
-            sense_buf = sense[0:sg_io_hdr.sb_len_wr]
-        else:
-            sense_buf = None
-        raise CheckConditionError(sense_buf)
+        # sg_io_hdr.sb_len_wr contains the length of data written to the
+        # sense buffer.  Create a new CBuffer that only contains the valid
+        # sense data.
+        valid_sense = cbuf.CBuffer(sense[0:sg_io_hdr.sb_len_wr])
+        raise_check_condition_err(valid_sense)
     elif sg_io_hdr.status != STATUS_SUCCESS:
         raise ScsiError(sg_io_hdr.status)
