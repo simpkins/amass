@@ -9,5 +9,6 @@ from . import binary
 # in the top-level cdrom module have been defined in several internal
 # modules.  Import their contents into our namespace
 from .constants import *
+from ._err import *
 from ._address import *
 from ._full_toc import *

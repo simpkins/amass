@@ -13,6 +13,7 @@ import struct
 
 from ... import cbuf
 from ... import scsi_sg as sg
+from .. import _err
 
 # Defined by the Mt. Fuji specification,
 # and the SCSI MMC specifications.
@@ -21,11 +22,15 @@ CMD_READ_TOC_PMA_ATIP = 0x43
 
 class Device(object):
     def __init__(self, name):
+        self.name = name
         self.fd = os.open(name, os.O_RDONLY | os.O_EXCL)
 
     def __del__(self):
         if self.fd >= 0:
             self.close()
+
+    def __str__(self):
+        return self.name
 
     def close(self):
         os.close(self.fd)
@@ -87,15 +92,23 @@ def read_full_toc(device):
 
 
 def read_cd_text(device):
-    # FIXME: If the CD doesn't contain CD-TEXT info,
-    # a CheckConditionError is raised, with a sense code of
-    # SENSE_ILLEGAL_REQUEST (0x5) and an additional sense code of 0x64
-    # (Illegal mode for this track).
-    #
-    # When READ TOC/PMA/ATIP is called with an illegal format, a
-    # CheckConditionError is raised with a sense code of SENSE_ILLEGAL_REQUEST
-    # and an additional sense code of 0x24 (Invalid field in cdb)
-    #
-    # We can probably use this to distinguish between no CD-TEXT info,
-    # and drives that don't support CD-TEXT.
-    return read_toc(device, format=5, number=0)
+    try:
+        return read_toc(device, format=5, number=0)
+    except sg.StdCheckConditionError, ex:
+        # We only handle certain SENSE_ILLEGAL_REQUEST errors.
+        # re-raise all other errors
+        if ex.senseKey != sg.SENSE_ILLEGAL_REQUEST:
+            raise
+
+        if ex.additionalSenseCode == sg.SENSE_ADDL_ILLEGAL_MODE_FOR_TRACK:
+            # Code 0x64 (Illegal mode for this track) means
+            # the CD does not contain CD-TEXT info.
+            raise _err.NoCdTextError(device)
+        elif ex.additionalSenseCode == sg.SENSE_ADDL_ILLEGAL_CDB_FIELD:
+            # Code 0x24 (Illegal field in cdb) means the CD-ROM device
+            # did not understand the request.  This is probably an older
+            # drive that does not support CD-TEXT.
+            raise _err.CdTextNotSupportedError(device)
+
+        # Unknown error.  re-raise it as-is
+        raise
