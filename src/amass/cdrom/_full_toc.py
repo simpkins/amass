@@ -5,6 +5,7 @@
 import struct
 
 from . import binary
+from . import constants
 from ._address import Address
 
 __all__ = ['FullTOCEntry', 'FullTOC', 'read_full_toc']
@@ -42,6 +43,9 @@ class TrackInfo(object):
         self.sessionNumber = session
         self.address = address
         self.ctrl = ctrl
+
+    def isDataTrack(self):
+        return bool(self.ctrl & constants.CTRL_DATA_TRACK)
 
 
 class FullTOC(object):
