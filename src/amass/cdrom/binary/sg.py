@@ -23,6 +23,7 @@ CMD_READ_TOC_PMA_ATIP = 0x43
 class Device(object):
     def __init__(self, name):
         self.name = name
+        self.fd = -1 # so self.fd exists in __del__ if open() fails
         self.fd = os.open(name, os.O_RDONLY | os.O_EXCL)
 
     def __del__(self):
