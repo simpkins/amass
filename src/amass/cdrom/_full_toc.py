@@ -68,6 +68,28 @@ class FullTOC(object):
         assert track.number == number
         return track
 
+    def hasAudioTrack0(self):
+        """
+        Determine if this CD appears to have hidden audio data before the first
+        track.
+
+        The pre-gap is 150 frames (2 seconds), and the first track normally
+        starts immediately after this.  However, some CDs start the first track
+        beyond this, and have hidden audio data before the first track.  (On a
+        normal CD player, you can rewind from the first track to hear this
+        data.)
+
+        This method returns True if the first track is an audio track, and
+        does not start immediately after the pre-gap.
+        """
+        if self.tracks[0].isDataTrack():
+            return False
+
+        if self.tracks[0].address <= Address(0, 2, 0):
+            return False
+
+        return True
+
     def toBuffer(self):
         data_len = 2 + (11 * len(self.rawEntries))
 

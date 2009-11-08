@@ -59,20 +59,21 @@ class Archiver(object):
         self.archiveTracks()
 
     def archiveTracks(self):
-        # TODO: It would be nice to store the pre-gap and pause information.
-        # Although the Mt. Fuji standard says that these
-        # areas must be encoded with null information, some audio CD's do hide
-        # audio data here:
-        # http://en.wikipedia.org/wiki/Pregap#Hidden_audio_tracks
+        # If this CD has hidden audio data before the first track,
+        # rip it as track 0.
+        if self.toc.hasAudioTrack0():
+            self.ripAudioTrack0()
+
+        # TODO: It would also be nice to record:
+        # - Track Indices
+        #   Tracks are broken down into indices.  It would be nice to also
+        #   record where each index starts and stops within the track.
+        #   ("icedax -v indices" can record this information.)
         #
-        # If the first track starts later than 00:02:00, I believe we can ask
-        # cdparanoia to rip track 0 to get this data.  However, not all CD-ROM
-        # drives support reading from the pre-gap.
-        #
-        # cdparanoia may also rip pause areas in between each track (including
-        # them with the previous track).  However, it would be nice if we had
-        # some way to indicate which sectors are pause sectors and which are
-        # marked as real audio data.
+        # - Pause Sectors
+        #   Each sector may be marked as a pause or an info sector.  It would
+        #   be nice to record which sectors are marked as pause.
+
         for track in self.toc.tracks:
             if track.isDataTrack():
                 self.archiveDataTrack(track)
@@ -96,9 +97,19 @@ class Archiver(object):
                '--', str(track.number), output_path]
         subprocess.check_call(cmd)
 
+    def ripAudioTrack0(self):
+        print 'Ripping hidden audio track 0'
+        output_path = os.path.join(self.outputDir, 'track00.wav')
+        # cdparanoia will rip audio data before track 1 by specifying
+        # the track number as 0.  It starts ripping just after the pre-gap
+        # (MSF 00:02:00, LBA 0), and continues up to the first track.
+        cmd = ['cdparanoia', '-d', self.options.device, '--', '0', output_path]
+        subprocess.check_call(cmd)
+
 
 def main(argv):
-    parser = optparse.OptionParser()
+    usage = '%prog [options]'
+    parser = optparse.OptionParser(usage=usage)
     parser.add_option('-d', '--device', action='store',
                       dest='device', default='/dev/cdrom',
                       metavar='DEVICE', help='The CD-ROM device')
