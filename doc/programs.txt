@@ -1,0 +1,35 @@
+External programs for reading CDs
+---------------------------------
+
+
+readom dev=<device> -fulltoc f=<file>
+
+  Read the full TOC information (as returned by "READ TOC/PMA/ATIP" format 2.)
+  Prints the TOC in hex on stdout, and writes it in binary to <file>.toc.
+  The output on stdout does not contain the 4 byte header (2 bytes of length,
+  1st session number, last session number), but the data written to the file
+  does.
+
+readom dev=<device> -clone f=<file>
+
+  (I haven't tested this much)
+  Write the full CD will all subchannel data (i.e. 2352 bytes per sector, I
+  assume) to <file>.  The full TOC is written to <file>.toc
+
+  Quite possibly could return inaccurate data for audio tracks, since they
+  can't be reliably read without processing such as done by libparanoia.
+
+icedax dev=<device> -J -v indices
+
+  Write an audio_XX.inf file for each track.  The files will contain an
+  "Index=" line, containing the sectors within the track where the indices
+  change.  Also contains an "Index0=" line indicating where the pregap for the
+  next track starts (the pre-gap has index 0).  Index0 will be -1 if there is
+  no pre-gap.
+
+icedax dev=<device> -J -v catalog
+
+  Writes the usual audio_XX.inf files, but also prints the Media Catalog Number
+  (MCN) on stdout.
+
+icedax is also capable of outputting CD-TEXT information in the .inf files.
