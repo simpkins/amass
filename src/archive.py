@@ -55,6 +55,17 @@ class Archiver(object):
             cd_text_file.write(cd_text_buf)
             cd_text_file.close()
 
+        # TODO: it would be nice to also record which sectors are marked
+        # as pause sectors.  Storing the indices is probably sufficient for
+        # now, since usually only index 0 is pause.
+
+        # Store extra track information via icedax
+        # (This includes things like the locations of the indices and
+        # pregap within each track, the ISRC numbers, and the MCN number.)
+        icedax_dir = os.path.join(self.outputDir, 'icedax')
+        os.mkdir(icedax_dir)
+        cdrom.icedax.write_info_files(self.options.device, icedax_dir)
+
         # Store the track data
         self.archiveTracks()
 
@@ -63,16 +74,6 @@ class Archiver(object):
         # rip it as track 0.
         if self.toc.hasAudioTrack0():
             self.ripAudioTrack0()
-
-        # TODO: It would also be nice to record:
-        # - Track Indices
-        #   Tracks are broken down into indices.  It would be nice to also
-        #   record where each index starts and stops within the track.
-        #   ("icedax -v indices" can record this information.)
-        #
-        # - Pause Sectors
-        #   Each sector may be marked as a pause or an info sector.  It would
-        #   be nice to record which sectors are marked as pause.
 
         for track in self.toc.tracks:
             if track.isDataTrack():
