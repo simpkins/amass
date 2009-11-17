@@ -118,8 +118,9 @@ def main(argv):
     (options, args) = parser.parse_args(argv[1:])
 
     if args:
-        print >> sys.stderr, 'trailing arguments: %s' % (args,)
         parser.print_help(sys.stderr)
+        print >> sys.stderr, 'trailing arguments: %s' % (args,)
+        return 1
 
     archiver = Archiver(options)
     archiver.archive()
