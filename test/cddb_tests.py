@@ -25,6 +25,11 @@ class CddbTests(unittest.TestCase):
         cddb_id = cddb.get_cddb_id(full_toc)
         self.assertEqual(cddb_id, 0xab0d510e)
 
+    def testIdDuskAndSummer(self):
+        full_toc = cdrom.FullTOC(test_data.FULL_TOC_DUSK_AND_SUMMER)
+        cddb_id = cddb.get_cddb_id(full_toc)
+        self.assertEqual(cddb_id, 0xa809870a)
+
 
 if __name__ == '__main__':
     unittest.main()
