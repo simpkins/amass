@@ -21,3 +21,14 @@ class NoMatchesError(ProtocolError):
         CddbError.__init__(self, msg)
         self.discId = disc_id
         self.category = category
+
+
+class ParseError(CddbError):
+    def __init__(self, line_number, msg):
+        CddbError.__init__(self, '%d: %s' % (line_number, msg))
+        self.lineNumber = line_number
+        self.message = msg
+
+
+class DataError(CddbError):
+    pass

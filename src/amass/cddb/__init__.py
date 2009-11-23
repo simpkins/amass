@@ -6,3 +6,4 @@
 from .err import *
 from .util import *
 from . import cddbp
+from . import data
