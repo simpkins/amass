@@ -18,18 +18,29 @@ readom dev=<device> -clone f=<file>
 
   Quite possibly could return inaccurate data for audio tracks, since they
   can't be reliably read without processing such as done by libparanoia.
+  
+wodim dev=<device> -vv -toc
 
-icedax dev=<device> -J -v indices
+  Prints CD table of contents, and writes binary CD-TEXT data (if present)
+  to cdtext.dat.
 
-  Write an audio_XX.inf file for each track.  The files will contain an
-  "Index=" line, containing the sectors within the track where the indices
-  change.  Also contains an "Index0=" line indicating where the pregap for the
-  next track starts (the pre-gap has index 0).  Index0 will be -1 if there is
-  no pre-gap.
+icedax dev=<device> -J -v all
 
-icedax dev=<device> -J -v catalog
+  Write an audio_XX.inf file for each track.  In addition to normal table of
+  contents information, the files also contain:
 
-  Writes the usual audio_XX.inf files, but also prints the Media Catalog Number
-  (MCN) on stdout.
+  - index information:
+    The "Index=" line contains the sectors within the track where the indices
+    change.  The "Index0=" line indicates where the pregap for the next track
+    starts (the pre-gap has index 0, and appears after the positively-numbered
+    indices for this track).  Index0 will be -1 if there is no pre-gap.
 
-icedax is also capable of outputting CD-TEXT information in the .inf files.
+  - catalog information
+    The "MCN=" line contains the Media Catalog Number, if present on the disc.
+
+  - parsed CD-TEXT information
+    Each file contains Albumperformer=, Performer=, and Albumtitle= lines
+    containing information from CD-TEXT (if present).
+
+  - ISRC information
+    The ISRC= line contains the ISRC number for the track, if present.
