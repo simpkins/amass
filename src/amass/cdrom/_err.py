@@ -16,3 +16,6 @@ class CdTextNotSupportedError(CdError):
         CdError.__init__(self, 'drive %s does not support CD-TEXT' %
                          (device,))
         self.device = device
+
+class CdTextError(CdError):
+    pass

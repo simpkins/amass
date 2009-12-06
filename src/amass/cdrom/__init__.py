@@ -12,5 +12,6 @@ from .constants import *
 from ._err import *
 from ._address import *
 from ._full_toc import *
+from . import _cdtext as cdtext
 
 from . import icedax
