@@ -1,0 +1,6 @@
+This is just a collection of scripts for ripping audio CDs.
+It's still very much a work in progress.
+
+src/archive.py is the main ripper script for now.
+It requires cdparanoia to rip the audio tracks, readom to rip the data tracks,
+and icedax to rip track index information and ISRC info.
