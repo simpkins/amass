@@ -66,15 +66,17 @@ class Data(object):
         if track_num < 1 or track_num > len(self.trackOffsets):
             raise IndexError('invalid track number: %d' % (track_num,))
         if self.isMultiArtist():
-            title_str = self.getParameter('TTITLE%d' % (track_num - 1))
+            title_str = self.fields['TTITLE%d' % (track_num - 1)]
             return self.parseArtistAndTitle(title_str)[0]
         else:
             return self.getArtist()
 
     def getTrackTitle(self, track_num):
+        # FIXME: This check isn't correct if the first track
+        # number is something other than 1
         if track_num < 1 or track_num > len(self.trackOffsets):
             raise IndexError('invalid track number: %d' % (track_num,))
-        title_str = self.getParameter('TTITLE%d' % (track_num - 1))
+        title_str = self.fields['TTITLE%d' % (track_num - 1)]
         if self.isMultiArtist():
             return self.parseArtistAndTitle(title_str)[1]
         else:
@@ -99,6 +101,8 @@ class Data(object):
 
         # Make sure that the number of offsets matches
         # the number of track titles
+        #
+        # FIXME: Handle CDs whose first track number is not 1
         num_offsets = len(self.trackOffsets)
         num_tracks = 0
         while True:
