@@ -37,7 +37,7 @@ class AlbumDir(object):
         toc_path = self.getTocPath()
         try:
             toc_file = open(toc_path, 'rb')
-        except OSError, ex:
+        except IOError, ex:
             if ex.errno == errno.ENOENT:
                 raise NotAnAlbumDirError(self.path)
             raise
@@ -69,7 +69,7 @@ class AlbumDir(object):
                                      'releases')
         try:
             releases_file = open(releases_path, 'rb')
-        except OSError, ex:
+        except IOError, ex:
             if ex.errno == errno.ENOENT:
                 return None
             raise
@@ -85,7 +85,7 @@ class AlbumDir(object):
             cdtext_file = open(cdtext_path, 'rb')
             cdtext_buf = cdtext_file.read()
             cdtext_file.close()
-        except OSError, ex:
+        except IOError, ex:
             if ex.errno == errno.ENOENT:
                 return None
             raise
