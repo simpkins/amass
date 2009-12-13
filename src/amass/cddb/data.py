@@ -73,14 +73,39 @@ class Data(object):
 
     def getTrackTitle(self, track_num):
         # FIXME: This check isn't correct if the first track
-        # number is something other than 1
+        # number is something other than 1.  I'm not sure how CDDB handles
+        # that situation.
         if track_num < 1 or track_num > len(self.trackOffsets):
             raise IndexError('invalid track number: %d' % (track_num,))
         title_str = self.fields['TTITLE%d' % (track_num - 1)]
-        if self.isMultiArtist():
+
+        album_artist = self.getArtist()
+        if album_artist == MULTI_ARTIST_NAME:
+            # This is a multi-artist album.  Each track should have
+            # both the artist and title name.
             return self.parseArtistAndTitle(title_str)[1]
         else:
-            return title_str
+            # Even if this isn't a multi-artist disc, check to see if the title
+            # looks like it might contain the artist name anyway.  I've seen
+            # some entries where the artist name is repeated in some tracks.
+            s = title_str.split(' / ', 1)
+            if len(s) == 1:
+                # Good, no artist name.
+                return title_str
+            else:
+                # Hmm.  Maybe an artist / title string?
+                if s[0] == album_artist:
+                    # The track artist matches the album artist.
+                    # Assume the track title is in fact 'artist / title',
+                    # and just return the title portion
+                    return s[1]
+                else:
+                    # Hmm.  It looks like an 'artist / title' string, but the
+                    # artist name doesn't match the name we expected.
+                    # Return the whole thing.  (Otherwise we'd be ignoring the
+                    # "artist" portion, and there's no other way for the caller
+                    # to figure out what that is.)
+                    return title_str
 
     def validate(self):
         # Check for the required parameters
