@@ -11,8 +11,8 @@ SCORE_GOOD = 90
 
 class FieldTypeError(TypeError):
     def __init__(self, field, value, msg):
-        ValueError.__init__(self, 'invalid value type %r for %r field: %s' %
-                            (value, field, msg))
+        TypeError.__init__(self, 'invalid value type %r for %r field: %s' %
+                           (value, field.__name__, msg))
         self.field = field
         self.value = value
         self.message = msg
@@ -21,7 +21,7 @@ class FieldTypeError(TypeError):
 class FieldValueError(ValueError):
     def __init__(self, field, value, msg):
         ValueError.__init__(self, 'invalid value %r for %r field: %s' %
-                            (value, field, msg))
+                            (value, field.__name__, msg))
         self.field = field
         self.value = value
         self.message = msg
@@ -71,10 +71,10 @@ class Field(object):
 
 
 class StringField(Field):
-    @staticmethod
-    def coerce(value):
+    @classmethod
+    def coerce(clazz, value):
         if not isinstance(value, unicode):
-            raise FieldTypeError(self, value, 'must be a unicode string')
+            raise FieldTypeError(clazz, value, 'must be a unicode string')
         return value
 
     @staticmethod
@@ -89,34 +89,34 @@ class StringField(Field):
 
 
 class IntField(Field):
-    @staticmethod
-    def coerce(value):
+    @classmethod
+    def coerce(clazz, value):
         if isinstance(value, (unicode, str)):
             try:
                 return int(value)
             except ValueError:
-                raise FieldValueError(self, value,
+                raise FieldValueError(clazz, value,
                                       'value does not represent an integer')
         if isinstance(value, (int, long)):
             return value
 
-        raise FieldValueError(self, value, 'expected an integer')
+        raise FieldValueError(clazz, value, 'expected an integer')
 
 
 class StringListField(Field):
-    @staticmethod
-    def coerce(value):
+    @classmethod
+    def coerce(clazz, value):
         if isinstance(value, unicode):
             return [value]
 
         if isinstance(value, collections.Container):
             for elem in value:
-                if not isinstance(value, unicode):
-                    raise FieldTypeError(self, value,
+                if not isinstance(elem, unicode):
+                    raise FieldTypeError(clazz, value,
                                          'must contain only unicode strings')
             return list(value)
 
-        raise FieldTypeError(self, value,
+        raise FieldTypeError(clazz, value,
                              'expected a list of unicode strings')
 
 
