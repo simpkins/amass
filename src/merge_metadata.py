@@ -53,39 +53,147 @@ class Merger(object):
         return sources
 
     def merge(self):
-        tracks = []
-        for track in self.toc.tracks:
-            mt = self.mergeTrackInfo(track.number)
-            tracks.append(mt)
+        # Perform initial auto-merge of the data
+        tracks = self.createMergeTracks()
 
-        # FIXME: Add code to allow for human review of the choices.
-        # The confidence values should be called out so the reviewer can easily
-        # see which fields deserve closer examination.
+        # Now perform final selection
+        chooser = CliChooser(tracks, 100)
+        chooser.choose()
+
+        # Extract the merged information
+        final_tracks = []
         for track in tracks:
-            print 'Track('
-            print '    %r,' % (track.number,)
+            final_tracks.append(track.mergedTrackInfo)
+
+        return final_tracks
+
+    def createMergeTracks(self):
+        merge_tracks = []
+        for track in self.toc.tracks:
+            # Create a new MergeTrack object
+            mt = metadata.merge.MergeTrack(track.number)
+            final_track = mt.mergedTrackInfo
+
+            # Update the MergeTrack with information from all our sources
+            for source in self.sources:
+                source.updateTrack(mt)
+
+            # For each field, rate the candidate values
+            for field in mt.fields.itervalues():
+                field.rateCandidates()
+
+                # Update the final merged track info with the preferred choice.
+                # This may later be overridden by one of the chooser methods.
+                pref = field.preferredChoice
+                if pref is not None:
+                    final_track.fields[field.name].set(pref.value)
+
+            merge_tracks.append(mt)
+
+        return merge_tracks
+
+
+class ChooserBase(object):
+    def __init__(self, tracks):
+        self.tracks = tracks
+
+    def getAlbumWideFields(self):
+        album_wide = []
+
+        track = self.tracks[0]
+        for field in track.fields.itervalues():
+            if not field.candidates:
+                continue
+
+            all_same = True
+            for other_track in self.tracks[1:]:
+                other_field = other_track.fields[field.name]
+
+                if not other_field.candidates:
+                    all_same = False
+                    break
+
+                if (field.preferredChoice.value !=
+                    other_field.preferredChoice.value):
+                    all_same = False
+                    break
+
+            if all_same:
+                album_wide.append(field.name)
+
+        return album_wide
+
+
+class CliChooser(ChooserBase):
+    def __init__(self, tracks, threshold):
+        ChooserBase.__init__(self, tracks)
+        self.confidenceThreshold = threshold
+
+    def write(self, msg):
+        sys.stdout.write(msg)
+
+    def writeln(self, msg):
+        sys.stdout.write(msg)
+        sys.stdout.write('\n')
+
+    def writeField(self, track_number, field):
+        COLOR_RED = '\033[31m'
+        COLOR_YELLOW = '\033[33m'
+        COLOR_GREEN = '\033[32m'
+        COLOR_RESET = '\033[0m'
+
+        if field.preferredChoice.confidence < 50:
+            conf_color = COLOR_RED
+        elif field.preferredChoice.confidence < 90:
+            conf_color = COLOR_YELLOW
+        else:
+            conf_color = COLOR_GREEN
+
+        fmt_str = ('{track_number:2} {field.name:<15} '
+                   '{color_conf}'
+                   '{field.preferredChoice.confidence:3}'
+                   '{color_reset}  '
+                   '{field.preferredChoice.value}')
+        s = fmt_str.format(track_number=track_number, field=field,
+                           color_conf=conf_color,
+                           color_reset=COLOR_RESET)
+        self.writeln(s)
+
+    def choose(self):
+        album_wide = self.getAlbumWideFields()
+
+        if album_wide:
+            self.writeln('* Album-wide Fields:')
+            for field_name in album_wide:
+                field = self.tracks[0].fields[field_name]
+                # FIXME: there shouldn't be a track number in the output here
+                self.writeField('--', field)
+
+        self.writeln('* Track Fields:')
+
+        for track in self.tracks:
             for field in track.fields.itervalues():
                 if not field.candidates:
-                    # Ignore fields with no data sources
                     continue
-                field.rateCandidates()
-                print('    %s=%r, # confidence = %d%%, score = %d' %
-                      (field.name, field.preferredChoice.value,
-                       field.preferredChoice.confidence,
-                       field.preferredChoice.score))
-                if field.preferredChoice.confidence <= 50:
-                    print '        # All choices:'
-                    for candidate in field.candidates.itervalues():
-                        print('        # %r  score=%d, sources=%s' %
-                              (candidate.value, candidate.score,
-                               candidate.sources))
-            print ')'
+                if field.name in album_wide:
+                    continue
+                if field.name == 'trackNumber':
+                    continue
+                self.writeField(track.number, field)
 
-    def mergeTrackInfo(self, track_number):
-        track = metadata.merge.MergeTrack(track_number)
-        for source in self.sources:
-            source.updateTrack(track)
-        return track
+        # FIXME: Prompt the user for which fields should be edited
+
+
+# TODO: Add a GUI chooser, too.
+
+
+def print_metadata(tracks):
+    for track in tracks:
+        print 'Track %s:' % (track.number,)
+        for field in track.fields.itervalues():
+            if field.value is None:
+                continue
+            print '    %s: %r' % (field.name, field.value)
 
 
 def main(argv):
@@ -104,7 +212,9 @@ def main(argv):
 
     dir = archive.AlbumDir(args[0])
     merger = Merger(dir)
-    merger.merge()
+    tracks = merger.merge()
+
+    # print_metadata(tracks)
 
 
 if __name__ == '__main__':

@@ -79,7 +79,13 @@ class MbSource(DataSourceBase):
         return self.release.getTracks()[offset + track_num - 1]
 
     def updateTrack(self, track):
-        mb_track = self.__getTrack(track.number)
+        try:
+            mb_track = self.__getTrack(track.number)
+        except IndexError:
+            # Do nothing if there is no MusicBrainz info for this track
+            # (For example, this may occur if this is a data track.)
+            return
+
         track.album.addCandidate(self.release.getTitle(), self)
         track.trackTitle.addCandidate(mb_track.getTitle(), self)
 
@@ -226,6 +232,11 @@ class MergeField(object):
         return preferred_candidates
 
     def rateCandidates(self):
+        if not self.candidates:
+            # Nothing to do if there are no candidates
+            # Leave self.preferredChoice as None
+            return
+
         for candidate in self.candidates.itervalues():
             candidate.score = self.field.computeScore(candidate.value)
 
