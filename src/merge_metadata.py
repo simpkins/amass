@@ -187,15 +187,6 @@ class CliChooser(ChooserBase):
 # TODO: Add a GUI chooser, too.
 
 
-def print_metadata(tracks):
-    for track in tracks:
-        print 'Track %s:' % (track.number,)
-        for field in track.fields.itervalues():
-            if field.value is None:
-                continue
-            print '    %s: %r' % (field.name, field.value)
-
-
 def main(argv):
     usage = '%prog [options] DIR'
     parser = optparse.OptionParser(usage=usage)
@@ -214,7 +205,10 @@ def main(argv):
     merger = Merger(dir)
     tracks = merger.merge()
 
-    # print_metadata(tracks)
+    info_path = os.path.join(dir.path, 'metadata', 'info')
+    f = open(info_path, 'w')
+    metadata.track.write(tracks, f)
+    f.close()
 
 
 if __name__ == '__main__':
