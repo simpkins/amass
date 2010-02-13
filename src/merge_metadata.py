@@ -190,6 +190,9 @@ class CliChooser(ChooserBase):
 def main(argv):
     usage = '%prog [options] DIR'
     parser = optparse.OptionParser(usage=usage)
+    parser.add_option('--dry-run', '-n',
+                      action='store_true', dest='dryRun', default=False,
+                      help='Dry run only, do not write metadata')
     (options, args) = parser.parse_args(argv[1:])
 
     if not args:
@@ -201,14 +204,19 @@ def main(argv):
         print >> sys.stderr, 'trailing arguments: %s' % (args[1:],)
         return 1
 
+    # TODO: If a metadata/info file already exists, take it into account.
+    # Its values should probably be pre-selected as the preferred choices for
+    # each field.
+
     dir = archive.AlbumDir(args[0])
     merger = Merger(dir)
     tracks = merger.merge()
 
-    info_path = os.path.join(dir.path, 'metadata', 'info')
-    f = open(info_path, 'w')
-    metadata.track.write(tracks, f)
-    f.close()
+    if not options.dryRun:
+        info_path = os.path.join(dir.path, 'metadata', 'info')
+        f = open(info_path, 'w')
+        metadata.track.write(tracks, f)
+        f.close()
 
 
 if __name__ == '__main__':
