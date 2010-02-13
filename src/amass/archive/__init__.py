@@ -31,7 +31,7 @@ class AlbumDir(object):
             raise NotAnAlbumDirError(self.path)
 
     def getTocPath(self):
-        return os.path.join(self.path, 'full_toc.raw')
+        return os.path.join(self.path, 'metadata', 'full_toc.raw')
 
     def getToc(self):
         toc_path = self.getTocPath()
@@ -80,7 +80,7 @@ class AlbumDir(object):
         return release_results
 
     def getCdText(self):
-        cdtext_path = os.path.join(self.path, 'cd_text.raw')
+        cdtext_path = os.path.join(self.path, 'metadata', 'cd_text.raw')
         try:
             cdtext_file = open(cdtext_path, 'rb')
             cdtext_buf = cdtext_file.read()
