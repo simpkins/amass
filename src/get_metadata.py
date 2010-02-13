@@ -7,16 +7,18 @@ import optparse
 import os
 import sys
 
+from amass import archive
 from amass import cdrom
 from amass import cddb
+from amass import file_util
 from amass import mb
 
 
-def fetch_cddb(toc, metadata_dir):
+def fetch_cddb(toc, dir):
     # Create the cddb directory.
     # For now, just fail if it already exists
-    cddb_dir = os.path.join(metadata_dir, 'cddb')
-    os.mkdir(cddb_dir)
+    cddb_dir = dir.getCddbDir()
+    os.makedirs(cddb_dir)
 
     # Connect to CDDB, and query for matching discs
     conn = cddb.cddbp.Connection('freedb.freedb.org')
@@ -49,42 +51,26 @@ def fetch_cddb(toc, metadata_dir):
         os.close(fd)
 
 
-def fetch_mb(toc, metadata_dir):
-    # Create the mb directory.
-    # For now, just fail if it already exists
-    mb_dir = os.path.join(metadata_dir, 'musicbrainz')
-    os.mkdir(mb_dir)
-
+def fetch_mb(toc, dir):
     # Query raw data from MusicBrainz
     mb_data = mb.query_toc_raw(toc)
 
-    # Write the response data to a file
-    path = os.path.join(mb_dir, 'releases')
-    print 'Writing %s' % (path,)
-
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0666)
-    os.write(fd, mb_data)
-    os.close(fd)
+    mb_path = dir.getMusicBrainzPath()
+    print 'Writing %s' % (mb_path,)
+    mb_file = file_util.open_new(mb_path)
+    mb_file.write(mb_data)
+    mb_file.close()
 
 
 def process_dir(dir):
     # Read the table of contents
-    toc_path = os.path.join(dir, 'full_toc.raw')
-    f = open(toc_path)
+    f = open(dir.getTocPath())
     toc_buf = f.read()
     f.close()
     toc = cdrom.FullTOC(toc_buf)
 
-    # Create the metadata directory, if it doesn't already exist
-    metadata_dir = os.path.join(dir, 'metadata')
-    try:
-        os.mkdir(metadata_dir)
-    except OSError, ex:
-        if ex.errno != errno.EEXIST:
-            raise
-
-    fetch_cddb(toc, metadata_dir)
-    fetch_mb(toc, metadata_dir)
+    fetch_cddb(toc, dir)
+    fetch_mb(toc, dir)
 
 
 def main(argv):
@@ -101,7 +87,8 @@ def main(argv):
         print >> sys.stderr, 'trailing arguments: %s' % (args[1:],)
         return 1
 
-    process_dir(args[0])
+    dir = archive.AlbumDir(args[0])
+    process_dir(dir)
 
 
 if __name__ == '__main__':
