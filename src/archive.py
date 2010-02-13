@@ -7,8 +7,10 @@ import os
 import subprocess
 import sys
 
+from amass import archive
 from amass import cdrom
 from amass import cddb
+from amass import file_util
 
 
 def warn(msg):
@@ -35,23 +37,19 @@ class Archiver(object):
         # Compute the CDDB ID, to use for the output directory name
         self.toc = cdrom.FullTOC(full_toc_buf)
         cddb_id = cddb.get_cddb_id(self.toc)
-        self.outputDir = '%08x' % (cddb_id,)
-        print 'Archiving CD data to %s%s' % (self.outputDir, os.sep)
 
-        # Note: mkdir may raise an exception,
-        # including if a directory with this name already exists.
-        os.mkdir(self.outputDir)
+        # Create the album directory
+        self.outputDir = archive.AlbumDir('%08x' % (cddb_id,), new=True)
+        print 'Archiving CD data to %s%s' % (self.outputDir.path, os.sep)
 
         # Store the full toc data
-        toc_path = os.path.join(self.outputDir, 'full_toc.raw')
-        toc_file = open(toc_path, 'w')
+        toc_file = file_util.open_new(self.outputDir.getTocPath())
         toc_file.write(full_toc_buf)
         toc_file.close()
 
         # Store the CD-TEXT data
         if cd_text_buf is not None:
-            cd_text_path = os.path.join(self.outputDir, 'cd_text.raw')
-            cd_text_file = open(cd_text_path, 'w')
+            cd_text_file = file_util.open_new(self.outputDir.getCdTextPath())
             cd_text_file.write(cd_text_buf)
             cd_text_file.close()
 
@@ -62,8 +60,8 @@ class Archiver(object):
         # Store extra track information via icedax
         # (This includes things like the locations of the indices and
         # pregap within each track, the ISRC numbers, and the MCN number.)
-        icedax_dir = os.path.join(self.outputDir, 'icedax')
-        os.mkdir(icedax_dir)
+        icedax_dir = self.outputDir.getIcedaxDir()
+        os.makedirs(icedax_dir)
         cdrom.icedax.write_info_files(self.options.device, icedax_dir)
 
         # Store the track data
@@ -84,7 +82,9 @@ class Archiver(object):
     def archiveDataTrack(self, track):
         print 'Saving data track %d' % (track.number,)
         output_name = 'track%02d.bin' % (track.number,)
-        output_path = os.path.join(self.outputDir, output_name)
+        output_path = os.path.join(self.outputDir.getDataTrackDir(),
+                                   output_name)
+        file_util.prepare_new(output_path)
         cmd = ['readom', 'dev=' + self.options.device,
                'sectors=%d-%d' % (track.address.lba, track.endAddress.lba),
                'f=' + output_path]
@@ -93,14 +93,16 @@ class Archiver(object):
     def ripAudioTrack(self, track):
         print 'Ripping audio track %d' % (track.number,)
         output_name = 'track%02d.wav' % (track.number,)
-        output_path = os.path.join(self.outputDir, output_name)
+        output_path = os.path.join(self.outputDir.getWavDir(), output_name)
+        file_util.prepare_new(output_path)
         cmd = ['cdparanoia', '-d', self.options.device,
                '--', str(track.number), output_path]
         subprocess.check_call(cmd)
 
     def ripAudioTrack0(self):
         print 'Ripping hidden audio track 0'
-        output_path = os.path.join(self.outputDir, 'track00.wav')
+        output_path = os.path.join(self.outputDir.getWavDir(), 'track00.wav')
+        file_util.prepare_new(output_path)
         # cdparanoia will rip audio data before track 1 by specifying
         # the track number as 0.  It starts ripping just after the pre-gap
         # (MSF 00:02:00, LBA 0), and continues up to the first track.
