@@ -8,6 +8,7 @@ import sys
 
 from amass import archive
 from amass import cdrom
+from amass import file_util
 from amass import metadata
 
 
@@ -213,8 +214,7 @@ def main(argv):
     tracks = merger.merge()
 
     if not options.dryRun:
-        info_path = os.path.join(dir.path, 'metadata', 'info')
-        f = open(info_path, 'w')
+        f = file_util.open_new(dir.getMetadataInfoPath())
         metadata.track.write(tracks, f)
         f.close()
 

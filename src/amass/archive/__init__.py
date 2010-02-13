@@ -38,6 +38,9 @@ class AlbumDir(object):
     def getTocPath(self):
         return os.path.join(self.getMetadataDir(), 'full_toc.raw')
 
+    def getMetadataInfoPath(self):
+        return os.path.join(self.getMetadataDir(), 'info')
+
     def getCdTextPath(self):
         return os.path.join(self.getMetadataDir(), 'cd_text.raw')
 
