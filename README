@@ -1,6 +1,20 @@
-This is just a collection of scripts for ripping audio CDs.
-It's still very much a work in progress.
+This is a collection of scripts for ripping audio CDs.
+They aren't very user-friendly or usable at the moment.
 
-src/archive.py is the main ripper script for now.
-It requires cdparanoia to rip the audio tracks, readom to rip the data tracks,
-and icedax to rip track index information and ISRC info.
+- src/archive.py is the main ripper script
+
+  It attempts to extract all possible data from the CD, including:
+  - all audio tracks
+  - all data tracks
+  - any "hidden" audio data before track 1
+  - CD-TEXT information, if present
+  - track ISRC codes
+  - intra-track indices
+
+  It requires cdparanoia to rip the audio tracks, readom to rip the data
+  tracks, and icedax to rip track index information and ISRC info.
+
+- get_metadata.py retrieves metadata from CDDB and MusicBrainz.
+
+- merge_metadata.py attempts to heuristically merge metadata from
+  CD-TEXT, CDDB, and MusicBrainz.
