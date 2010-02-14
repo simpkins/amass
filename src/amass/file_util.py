@@ -42,3 +42,14 @@ def prepare_new(path):
     except OSError, ex:
         if ex.errno != errno.EEXIST:
             raise
+
+
+def find_files_by_suffix(dir, suffix):
+    files = []
+    for entry in os.listdir(dir):
+        if not entry.endswith(suffix):
+            continue
+        path = os.path.join(dir, entry)
+        files.append(path)
+
+    return files
