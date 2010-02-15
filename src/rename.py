@@ -38,6 +38,14 @@ def rename_files(info_list):
         os.rename(old_path, new_path)
 
 
+def process_track_dir(dir, suffix, tracks):
+    if not os.path.isdir(dir):
+        return
+
+    info_list = archive.find_track_files(dir, suffix, tracks)
+    rename_files(info_list)
+
+
 def main(argv):
     # Parse the command line options
     usage = '%prog [options] DIR'
@@ -60,8 +68,9 @@ def main(argv):
     tracks = metadata.track.read(f)
     f.close()
 
-    info_list = archive.find_track_files(dir.getWavDir(), '.wav', tracks)
-    rename_files(info_list)
+    # Rename the audio files
+    process_track_dir(dir.getWavDir(), '.wav', tracks)
+    process_track_dir(dir.getFlacDir(), '.flac', tracks)
 
 
 if __name__ == '__main__':

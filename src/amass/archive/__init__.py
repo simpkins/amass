@@ -63,6 +63,9 @@ class AlbumDir(object):
     def getWavDir(self):
         return os.path.join(self.path, 'wav')
 
+    def getFlacDir(self):
+        return os.path.join(self.path, 'flac')
+
     def getToc(self):
         toc_path = self.getTocPath()
         try:
