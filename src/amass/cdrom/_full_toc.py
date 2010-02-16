@@ -44,6 +44,11 @@ class TrackInfo(object):
         self.address = address
         self.ctrl = ctrl
 
+        # There are some additional attributes set by the parsing code after
+        # construction occurs:
+        self.endAddress = None
+        self.session = None
+
     def isDataTrack(self):
         return bool(self.ctrl & constants.CTRL_DATA_TRACK)
 
