@@ -85,7 +85,15 @@ class FullTOC(object):
         if self.tracks[0].isDataTrack():
             return False
 
-        if self.tracks[0].address <= Address(0, 2, 0):
+        # The pre-gap ends at Address(0, 2, 0), and this is normally where
+        # audio starts.  However, I've seen several CDs where the first track
+        # starts at Address(0, 2, 32).
+        #
+        # For now, we allow a little padding, and return False if the first
+        # track starts less than 1 second after the pre-gap ends.  This way we
+        # don't return True when there is less than 1 second of possible hidden
+        # audio.
+        if self.tracks[0].address < Address(0, 3, 0):
             return False
 
         return True
