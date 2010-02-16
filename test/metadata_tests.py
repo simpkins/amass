@@ -21,3 +21,7 @@ class TitleScoreTests(unittest.TestCase):
     def testScoreCapitalized(self):
         value = 'This Is A Test'
         self.assertTrue(TitleField.computeScore(value) >= SCORE_GOOD)
+
+
+if __name__ == '__main__':
+    unittest.main()
