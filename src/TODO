@@ -1,0 +1,22 @@
+- archive.find_track_files() should use the track length
+
+- Handle multi-part works
+  - some CDs put them on 1 track, with multiple indices (e.g., 2112)
+  - some CDs put them on multiple tracks (e.g. some classical CDs, where
+    each movement is a different track)
+    - some compilation CDs only include some of the movements (e.g.,
+      Glassworks)
+
+  - If we use 1 file per track, how do we indicate the various sub-parts (and
+    their titles) in the file metadata?
+
+  - Should prefer splitting multi-part tracks into multiple files?
+    - This is definitely preferred in some cases.  e.g., "hidden" tracks, where
+      the last track has the main song, a long silence, then another song.  It
+      would be nice to split this into 3 files (and probably just ignore/remove
+      the middle one that contains only silence).  Godsmack's "Voodoo" is an
+      example of this.
+
+
+Do we need to de-emphasize tracks recorded with pre-emphasis?
+  - "sox deemph" can do this
