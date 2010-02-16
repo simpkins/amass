@@ -3,10 +3,16 @@
 # Copyright (c) 2009, Adam Simpkins
 #
 import io
+import warnings
 
-import musicbrainz2.disc as mbdisc
-import musicbrainz2.webservice as mbws
-import musicbrainz2.wsxml as mbwsxml
+# Import the musicbrainz2 modules.
+# These use some deprecated code, so suppress DeprecationWarnings while
+# importing them.
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore', DeprecationWarning)
+    import musicbrainz2.disc as mbdisc
+    import musicbrainz2.webservice as mbws
+    import musicbrainz2.wsxml as mbwsxml
 
 from . import disc_id as mb_did
 
