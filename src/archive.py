@@ -40,16 +40,17 @@ class Archiver(object):
 
         # Create the album directory
         self.outputDir = archive.AlbumDir('%08x' % (cddb_id,), new=True)
-        print 'Archiving CD data to %s%s' % (self.outputDir.path, os.sep)
+        self.layout = self.outputDir.layout
+        print 'Archiving CD data to %s%s' % (self.layout.path, os.sep)
 
         # Store the full toc data
-        toc_file = file_util.open_new(self.outputDir.getTocPath())
+        toc_file = file_util.open_new(self.layout.getTocPath())
         toc_file.write(full_toc_buf)
         toc_file.close()
 
         # Store the CD-TEXT data
         if cd_text_buf is not None:
-            cd_text_file = file_util.open_new(self.outputDir.getCdTextPath())
+            cd_text_file = file_util.open_new(self.layout.getCdTextPath())
             cd_text_file.write(cd_text_buf)
             cd_text_file.close()
 
@@ -60,7 +61,7 @@ class Archiver(object):
         # Store extra track information via icedax
         # (This includes things like the locations of the indices and
         # pregap within each track, the ISRC numbers, and the MCN number.)
-        icedax_dir = self.outputDir.getIcedaxDir()
+        icedax_dir = self.layout.getIcedaxDir()
         os.makedirs(icedax_dir)
         cdrom.icedax.write_info_files(self.options.device, icedax_dir)
 
@@ -82,7 +83,7 @@ class Archiver(object):
     def archiveDataTrack(self, track):
         print 'Saving data track %d' % (track.number,)
         output_name = 'track%02d.bin' % (track.number,)
-        output_path = os.path.join(self.outputDir.getDataTrackDir(),
+        output_path = os.path.join(self.layout.getDataTrackDir(),
                                    output_name)
         file_util.prepare_new(output_path)
         cmd = ['readom', 'dev=' + self.options.device,
@@ -93,7 +94,7 @@ class Archiver(object):
     def ripAudioTrack(self, track):
         print 'Ripping audio track %d' % (track.number,)
         output_name = 'track%02d.wav' % (track.number,)
-        output_path = os.path.join(self.outputDir.getWavDir(), output_name)
+        output_path = os.path.join(self.layout.getWavDir(), output_name)
         file_util.prepare_new(output_path)
         cmd = ['cdparanoia', '-d', self.options.device,
                '--', str(track.number), output_path]
@@ -101,7 +102,7 @@ class Archiver(object):
 
     def ripAudioTrack0(self):
         print 'Ripping hidden audio track 0'
-        output_path = os.path.join(self.outputDir.getWavDir(), 'track00.wav')
+        output_path = os.path.join(self.layout.getWavDir(), 'track00.wav')
         file_util.prepare_new(output_path)
         # cdparanoia will rip audio data before track 1 by specifying
         # the track number as 0.  It starts ripping just after the pre-gap
