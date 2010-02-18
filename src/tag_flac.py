@@ -94,13 +94,13 @@ def main(argv):
     dir = archive.AlbumDir(args[0])
 
     # Load the metadata
-    f = open(dir.getMetadataInfoPath(), 'r')
-    tracks = metadata.track.read(f)
+    f = open(dir.layout.getMetadataInfoPath(), 'r')
+    dir.album.readTracks(f)
     f.close()
 
-    flac_dir = os.path.join(dir.path, 'flac')
+    flac_dir = dir.layout.getFlacDir()
     suffix = '.flac'
-    info_list = archive.find_track_files(flac_dir, suffix, tracks)
+    info_list = archive.util.find_track_files(flac_dir, suffix, dir.album)
     tag_files(info_list)
 
 if __name__ == '__main__':
