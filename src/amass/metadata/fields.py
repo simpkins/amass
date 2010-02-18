@@ -99,6 +99,9 @@ NewField('TrackCount', IntField, 'trackCount',
 NewField('UpcCode', StringField, 'upc',
          'The EAN/UPC code of the disc.',
          album_wide=True) # TODO: add a validate method?
+NewField('MediaCatalogNumber', StringField, 'mcn',
+         'The media catalog number, as stored in the CD Q-subchannel.',
+         album_wide=True)
 NewField('DiscID', StringField, 'discId',
          'The disc ID or catalog number (usually on the CD spine).',
          album_wide=True)
