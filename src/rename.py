@@ -11,8 +11,17 @@ from amass import metadata
 
 
 def get_track_name(track):
-    return '%02d - %s' % (track.number, track.trackTitle)
-    # return 'track%02d' % (track.number,)
+    if track.trackTitle.value is None:
+        # We often don't know the title for hidden data before the first track
+        title = '<unknown>'
+    else:
+        title = track.trackTitle
+
+    # FIXME: Strip out illegal characters.
+    # For most Unix filesystems, this is just '/'.
+    # For Windows filesystems, quite a few characters are illegal, and some
+    # file names are reserved.
+    return '%02d - %s' % (track.number, title)
 
 
 def rename_files(info_list):
