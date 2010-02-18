@@ -2,6 +2,7 @@
 #
 # Copyright (c) 2010, Adam Simpkins
 #
+import os
 
 from .. import cdrom
 from . import merge
@@ -139,3 +140,38 @@ class CdTextSource(DataSourceBase):
         num = track.number
         self.updateField(track.album, self.block.getAlbumTitle())
         self.updateField(track.trackTitle, self.block.getTrackTitle(num))
+
+
+class IcedaxSource(DataSourceBase):
+    """
+    A metadata source that represents information extracted from the
+    CD via icedax.
+    """
+    def __init__(self, dir):
+        Source.__init__(self, 'CD (via icedax)', 10000)
+        self.dir = dir
+
+    def updateTrack(self, track):
+        # Load the icedax info from the .inf file
+        filename = 'audio_%02d.inf' % (track.number,)
+        path = os.path.join(self.dir, filename)
+        info = cdrom.icedax.parse_info_file(path)
+
+        # Note that we don't store any information that icedax extracts from
+        # CD-TEXT here.  The CdTextSource is used for that purpose.
+
+        # Store the MCN
+        try:
+            mcn = info.getMCN()
+            self.updateField(track.mcn, mcn.decode('ascii'))
+        except KeyError:
+            # No MCN in icedax info
+            pass
+
+        # Store the ISRC info
+        try:
+            isrc = info.getISRC()
+            self.updateField(track.isrc, isrc.decode('ascii'))
+        except KeyError:
+            # No ISRC in icedax info
+            pass

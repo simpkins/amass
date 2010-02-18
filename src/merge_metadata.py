@@ -20,11 +20,10 @@ class Merger(object):
     def initSources(self):
         sources = []
 
-        # TODO: Add a source that uses information from the TOC
-        # (e.g., trackNumber, track length)
-        #
-        # TODO: Add a source that uses information read from the icedax file
-        # (e.g., ISRC and catalog number)
+        # Information read from the CD via icedax
+        icedax_dir = self.dir.layout.getIcedaxDir()
+        if os.path.isdir(icedax_dir):
+            sources.append(metadata.sources.IcedaxSource(icedax_dir))
 
         # CDDB
         cddb_entries = self.dir.getCddbEntries()
