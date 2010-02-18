@@ -29,9 +29,14 @@ class DataSourceBase(Source):
     """
     A base class for Source classes that contain metadata information.
     """
-    # TODO: Add the methods that must be implemented by DataSourceBase
-    # subclasses (updateTrack(), etc.)
-    pass
+    def updateTrack(self, track):
+        raise NotImplementedError('updateTrack() must be implemented by '
+                                  'DataSourceBase subclasses')
+
+    def updateField(self, field, value):
+        if field.candidates is None:
+            field.candidates = CandidateList(field)
+        field.candidates.addCandidate(value, self)
 
 
 class CddbSource(DataSourceBase):
@@ -49,11 +54,11 @@ class CddbSource(DataSourceBase):
 
     def updateTrack(self, track):
         num = track.number
-        track.album.addCandidate(self.entry.getTitle(), self)
-        track.trackTitle.addCandidate(self.entry.getTrackTitle(num), self)
-        track.artist.addCandidate(self.entry.getTrackArtist(num), self)
-        track.genre.addCandidate(self.entry.getGenre(), self)
-        track.releaseYear.addCandidate(self.entry.getYear(), self)
+        self.updateField(track.album, self.entry.getTitle())
+        self.updateField(track.trackTitle, self.entry.getTrackTitle(num))
+        self.updateField(track.artist, self.entry.getTrackArtist(num))
+        self.updateField(track.genre, self.entry.getGenre())
+        self.updateField(track.releaseYear, self.entry.getYear())
 
 
 class MbSource(DataSourceBase):
@@ -86,16 +91,16 @@ class MbSource(DataSourceBase):
             # (For example, this may occur if this is a data track.)
             return
 
-        track.album.addCandidate(self.release.getTitle(), self)
-        track.trackTitle.addCandidate(mb_track.getTitle(), self)
+        self.updateField(track.album, self.release.getTitle())
+        self.updateField(track.trackTitle, mb_track.getTitle())
 
         mb_artist = mb_track.getArtist()
         if mb_artist is None:
             mb_artist = self.release.getArtist()
-        track.artist.addCandidate(mb_artist.getName(), self)
+        self.updateField(track.artist, mb_artist.getName())
         # TODO: make sure the query parameters we send to musicbrainz
         # actually requests that artist sort names be returned.
-        track.artistSortName.addCandidate(mb_artist.getSortName(), self)
+        self.updateField(track.artistSortName, mb_artist.getSortName())
 
         try:
             isrcs = mb_track.getISRCs()
@@ -103,7 +108,7 @@ class MbSource(DataSourceBase):
             # getISRCs() isn't present in older musicbrainz2 code
             isrcs = []
         for isrc in isrcs:
-            track.isrc.addCandidate(isrc, self)
+            self.updateField(track.isrc, isrc)
 
         # TODO: prefer a US release event:
         for event in self.release.getReleaseEvents():
@@ -133,8 +138,8 @@ class CdTextSource(DataSourceBase):
 
     def updateTrack(self, track):
         num = track.number
-        track.album.addCandidate(self.block.getAlbumTitle(), self)
-        track.trackTitle.addCandidate(self.block.getTrackTitle(num), self)
+        self.updateField(track.album, self.block.getAlbumTitle())
+        self.updateField(track.trackTitle, self.block.getTrackTitle(num))
 
 
 # TODO: Add a source to add the ISRC codes from the stored icedax data
@@ -175,23 +180,17 @@ class PreferredChoice(object):
         self.confidence = confidence
 
 
-class MergeField(object):
+class CandidateList(object):
     """
     A metadata field containing information from various sources.
     """
-    def __init__(self, name, field=None):
-        self.name = name
+    def __init__(self, field):
         self.candidates = {}
+        self.field = field
         self.preferredChoice = None
 
-        if field is None:
-            # Look up the normal field object based on the field name
-            try:
-                field_class = fields.g_fields[name]
-            except KeyError:
-                raise Exception('unknown field %r' % (name,))
-            field = field_class()
-        self.field = field
+    def __nonzero__(self):
+        return bool(self.candidates)
 
     def addCandidate(self, value, source):
         # TODO: check self.field.coerce() and self.field.validate()?
@@ -349,47 +348,3 @@ class MergeField(object):
             confidence /= num_ties
         return PreferredChoice(best_candidate.value, best_candidate.sources,
                                confidence)
-
-    # TODO: the following simple sorting should eventually be removed
-    def getBestCandidate(self):
-        best_candidate = None
-        best_score = 0
-
-        for candidate in self.candidates.values():
-            if candidate.score > best_score:
-                best_candidate = candidate
-                best_score = candidate.score
-
-        return best_candidate
-
-    def getSortedCandidates(self):
-        return sorted(self.candidates.values(), key=lambda c: c.score,
-                      reverse=True)
-
-    def getBestValue(self):
-        return self.getBestCandidate().value
-
-
-class MergeTrack(object):
-    def __init__(self, number):
-        self.mergedTrackInfo = track.TrackInfo(number)
-
-        # Initialize one member variable for each field
-        self.fields = {}
-        for (name, field) in self.mergedTrackInfo.fields.iteritems():
-            merge_field = MergeField(name, field)
-            setattr(self, name, merge_field)
-            self.fields[name] = merge_field
-
-        # Update the self.trackNumber field with the value from the TOC
-        self.trackNumber.addCandidate(number, TocSource())
-
-        # Also add a plain number attribute, to allow easier access to
-        # the integer track number (so users don't have to go through the
-        # trackNumber field).
-        self.number = number
-
-    def sortedFields(self):
-        def sort_key(merge_field):
-            return merge_field.field.sortKey
-        return sorted(self.fields.itervalues(), key=sort_key)
