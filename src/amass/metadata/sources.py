@@ -139,15 +139,3 @@ class CdTextSource(DataSourceBase):
         num = track.number
         self.updateField(track.album, self.block.getAlbumTitle())
         self.updateField(track.trackTitle, self.block.getTrackTitle(num))
-
-
-# TODO: Add a source to add the ISRC codes from the stored icedax data
-class TocSource(Source):
-    """
-    A metadata source that represents information from the
-    CD Table of Contents.
-
-    This source is mainly used for things like track numbers.
-    """
-    def __init__(self):
-        Source.__init__(self, 'CD TOC', 10000)
