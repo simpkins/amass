@@ -69,6 +69,8 @@ class FullTOC(object):
 
     def getTrack(self, number):
         first_track_number = self.tracks[0].number
+        if number < first_track_number:
+            raise IndexError(number)
         track = self.tracks[number - first_track_number]
         assert track.number == number
         return track
