@@ -26,24 +26,27 @@ class Merger(object):
         # TODO: Add a source that uses information read from the icedax file
         # (e.g., ISRC and catalog number)
 
+        # CDDB
         cddb_entries = self.dir.getCddbEntries()
         if cddb_entries is not None:
             cddb_idx = 0
             for entry in cddb_entries:
-                source = metadata.merge.CddbSource(entry,
-                                                   'CDDB %d' % (cddb_idx,))
+                source = metadata.sources.CddbSource(
+                        entry, 'CDDB %d' % (cddb_idx,))
                 cddb_idx += 1
                 sources.append(source)
 
+        # MusicBrainz
         mb_releases = self.dir.getMbReleases()
         if mb_releases is not None:
             mb_idx = 0
             for release_result in mb_releases:
-                source = metadata.merge.MbSource(release_result,
-                                                 'MusicBrainz %d' % (mb_idx,))
+                source = metadata.sources.MbSource(
+                        release_result, 'MusicBrainz %d' % (mb_idx,))
                 mb_idx += 1
                 sources.append(source)
 
+        # CD-TEXT
         cdtext_info = self.dir.getCdText()
         if cdtext_info is not None:
             # We only care about the English info for now
@@ -53,7 +56,7 @@ class Merger(object):
                 block = None
 
             if block is not None:
-                sources.append(metadata.merge.CdTextSource(block))
+                sources.append(metadata.sources.CdTextSource(block))
 
         return sources
 
