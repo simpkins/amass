@@ -5,3 +5,4 @@
 from . import fields
 from . import merge
 from . import track
+from . import album

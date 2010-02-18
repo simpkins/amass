@@ -9,18 +9,18 @@ import os
 from .. import cdrom
 from .. import cddb
 from .. import mb
+from .. import metadata
 
 
 class AlbumDir(object):
     def __init__(self, path, new=False):
         self.layout = DirLayout(path)
-        if not new:
-            # Check for a table of contents file,
-            # to verify that this looks like an album directory
-            if not os.path.isfile(self.getTocPath()):
-                raise NotAnAlbumDirError(self.path)
+        if new:
+            self.album = None
+        else:
+            self.album = metadata.album.Album(self.__loadToc())
 
-    def getToc(self):
+    def __loadToc(self):
         toc_path = self.layout.getTocPath()
         try:
             toc_file = open(toc_path, 'rb')
