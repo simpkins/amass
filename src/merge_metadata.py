@@ -13,9 +13,8 @@ from amass import metadata
 
 
 class Merger(object):
-    def __init__(self, dir):
-        self.dir = dir
-        self.toc = self.dir.getToc()
+    def __init__(self, album_dir):
+        self.dir = album_dir
         self.sources = self.initSources()
 
     def initSources(self):
@@ -70,7 +69,8 @@ class Merger(object):
 
     def createMergeTracks(self):
         merge_tracks = []
-        for track in self.toc.tracks:
+        toc = self.dir.album.toc
+        for track in toc.tracks:
             # Create a new MergeTrack object
             mt = metadata.merge.MergeTrack(track.number)
             final_track = mt.mergedTrackInfo
