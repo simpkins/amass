@@ -32,6 +32,10 @@ def get_vorbis_name(field):
         return 'GENRE'
     if field.name == 'upc':
         return 'PRODUCTNUMBER'
+    if field.name == 'mcn':
+        return 'CATALOGNUMBER'
+    if field.name == 'isrc':
+        return 'ISRC'
 
     return None
 
