@@ -17,7 +17,7 @@ from amass import mb
 def fetch_cddb(toc, dir):
     # Create the cddb directory.
     # For now, just fail if it already exists
-    cddb_dir = dir.getCddbDir()
+    cddb_dir = dir.layout.getCddbDir()
     os.makedirs(cddb_dir)
 
     # Connect to CDDB, and query for matching discs
@@ -55,7 +55,7 @@ def fetch_mb(toc, dir):
     # Query raw data from MusicBrainz
     mb_data = mb.query_toc_raw(toc)
 
-    mb_path = dir.getMusicBrainzPath()
+    mb_path = dir.layout.getMusicBrainzPath()
     print 'Writing %s' % (mb_path,)
     mb_file = file_util.open_new(mb_path)
     mb_file.write(mb_data)
@@ -63,12 +63,7 @@ def fetch_mb(toc, dir):
 
 
 def process_dir(dir):
-    # Read the table of contents
-    f = open(dir.getTocPath())
-    toc_buf = f.read()
-    f.close()
-    toc = cdrom.FullTOC(toc_buf)
-
+    toc = dir.album.toc
     fetch_cddb(toc, dir)
     fetch_mb(toc, dir)
 
