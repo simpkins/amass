@@ -36,10 +36,10 @@ def main(argv):
 
     dir = archive.AlbumDir(args[0])
 
-    wav_files = file_util.find_files_by_suffix(dir.getWavDir(), '.wav')
+    wav_files = file_util.find_files_by_suffix(dir.layout.getWavDir(), '.wav')
     wav_files.sort()
 
-    flac_dir = os.path.join(dir.path, 'flac')
+    flac_dir = dir.layout.getFlacDir()
     try:
         os.makedirs(flac_dir)
     except OSError, ex:
