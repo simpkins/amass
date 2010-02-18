@@ -3,7 +3,9 @@
 # Copyright (c) 2010, Adam Simpkins
 #
 import errno
+import itertools
 import os
+import re
 
 from . import track
 
@@ -71,3 +73,56 @@ class Album(object):
         if track_info is None:
             raise IndexError(number)
         return track_info
+
+    def itertracks(self):
+        return itertools.ifilter(lambda x: x is not None, self.__tracks)
+
+    def getFirstTrack(self):
+        # TODO: Should this avoid returning track[0] if it exists?
+        i = self.itertracks()
+        return i.next()
+
+    def writeTracks(self, out):
+        for track in self.itertracks():
+            out.write('Track %d\n' % (track.number,))
+            for field in track.fields.itervalues():
+                if field.value is not None:
+                    out.write('  %s = %r\n' % (field.name, field.value))
+
+    def readTracks(self, data):
+        # Accept strings or file-like objects
+        if not isinstance(data, (str, unicode)):
+            data = data.read()
+
+        track_re = re.compile(r'Track (\d+)')
+
+        track = None
+        for line in data.splitlines():
+            m = track_re.match(line)
+            if m:
+                number = int(m.group(1))
+                track = self.track(number)
+                continue
+
+            if not line or line.startswith('#'):
+                continue
+
+            if not line.startswith('  '):
+                raise Exception('expected line to start with 2 spaces')
+
+            if track is None:
+                raise Exception('data before first track start')
+
+            try:
+                name, value = line.split(' = ', 1)
+                name = name.strip()
+            except ValueError:
+                raise Exception('expected line to be of the form '
+                                '<name> = <value>')
+
+            try:
+                field = track.fields[name]
+            except KeyError:
+                raise Exception('unknown field %r' % (name,))
+
+            field.set(eval(value))
