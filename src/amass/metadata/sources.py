@@ -53,6 +53,10 @@ class CddbSource(DataSourceBase):
         self.entry = entry
 
     def updateTrack(self, track):
+        # CDDB never has info for hidden data before the first track
+        if track.number == 0:
+            return
+
         num = track.number
         self.updateField(track.album, self.entry.getTitle())
         self.updateField(track.trackTitle, self.entry.getTrackTitle(num))
@@ -75,6 +79,13 @@ class MbSource(DataSourceBase):
         self.release = release_result.getRelease()
 
     def __getTrack(self, track_num):
+        if track_num < 1:
+            # MusicBrainz never has info for hidden data before track 1,
+            # so raise an IndexError if we are ever called for track 0.
+            #
+            # Also raise an error for negative index numbers.
+            raise IndexError
+
         offset = self.release.getTracksOffset()
         if offset is None:
             offset = 0
@@ -137,6 +148,10 @@ class CdTextSource(DataSourceBase):
         self.block = block
 
     def updateTrack(self, track):
+        # CD-TEXT will never have info for hidden data before the first track
+        if track.number == 0:
+            return
+
         num = track.number
         self.updateField(track.album, self.block.getAlbumTitle())
         self.updateField(track.trackTitle, self.block.getTrackTitle(num))
@@ -152,6 +167,10 @@ class IcedaxSource(DataSourceBase):
         self.dir = dir
 
     def updateTrack(self, track):
+        # Icedax will never have info for hidden data before the first track
+        if track.number == 0:
+            return
+
         # Load the icedax info from the .inf file
         filename = 'audio_%02d.inf' % (track.number,)
         path = os.path.join(self.dir, filename)
