@@ -38,11 +38,11 @@ def rename_files(info_list):
         os.rename(old_path, new_path)
 
 
-def process_track_dir(dir, suffix, tracks):
+def process_track_dir(dir, suffix, album):
     if not os.path.isdir(dir):
         return
 
-    info_list = archive.find_track_files(dir, suffix, tracks)
+    info_list = archive.find_track_files(dir, suffix, album)
     rename_files(info_list)
 
 
@@ -64,13 +64,13 @@ def main(argv):
     dir = archive.AlbumDir(args[0])
 
     # Load the metadata
-    f = open(dir.getMetadataInfoPath(), 'r')
-    tracks = metadata.track.read(f)
+    f = open(dir.layout.getMetadataInfoPath(), 'r')
+    dir.album.readTracks(f)
     f.close()
 
     # Rename the audio files
-    process_track_dir(dir.getWavDir(), '.wav', tracks)
-    process_track_dir(dir.getFlacDir(), '.flac', tracks)
+    process_track_dir(dir.layout.getWavDir(), '.wav', dir.album)
+    process_track_dir(dir.layout.getFlacDir(), '.flac', dir.album)
 
 
 if __name__ == '__main__':
