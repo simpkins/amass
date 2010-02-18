@@ -16,7 +16,7 @@ class FileInfo(object):
         return os.path.basename(self.path)
 
 
-def find_track_files(dir, suffix, tracks):
+def find_track_files(dir, suffix, album):
     """
     Find all files in the specified directory whose name ends with the
     specified suffix.
@@ -43,8 +43,25 @@ def find_track_files(dir, suffix, tracks):
     for filename in files:
         # Find all numbers in the filename
         numbers = [int(n) for n in re.findall(r'\d+', filename)]
-        # Prune out numbers that aren't in the expected track number range
-        numbers = [n for n in numbers if 0 < n and n <= len(tracks)]
+
+        # Prune out numbers that aren't valid track numbers for this album
+        possible_numbers = []
+        for number in numbers:
+            if number == 0:
+                if not album.toc.hasAudioTrack0():
+                    continue
+                track1 = album.toc.getTrack(1)
+                track_len = track1.address - cdrom.Address(0, 2, 0)
+            else:
+                try:
+                    track = album.toc.getTrack(number)
+                except IndexError:
+                    continue
+                track_len = track.endAddress - track.address
+
+            # TODO: Check the length of this file, and use it to help
+            # guess if it this file is a good match for this track.
+            possible_numbers.append(number)
 
         # TODO: For now, we require there to be exactly 1 number in each name.
         # This certainly won't be good enough in the future.  We should detect
@@ -68,7 +85,7 @@ def find_track_files(dir, suffix, tracks):
         numbers_to_name[number] = filename
 
         path = os.path.join(dir, filename)
-        track = tracks[number - 1]
+        track = album.track(number)
         info_list.append(FileInfo(path, track))
 
     # Sort info_list by track numberj
