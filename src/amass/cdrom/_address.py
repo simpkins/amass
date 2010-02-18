@@ -152,6 +152,15 @@ class Address(object):
             return False
         return True
 
+    def __sub__(self, other):
+        """
+        Return the number of frames between two addresses
+        """
+        min_delta = (self.min - other.min)
+        return ((min_delta * SECONDS_PER_MINUTE * FRAMES_PER_SECOND) +
+                ((self.sec - other.sec) * FRAMES_PER_SECOND) +
+                (self.frame - other.frame))
+
     @property
     def lba(self):
         return ((self.min * SECONDS_PER_MINUTE * FRAMES_PER_SECOND) +
