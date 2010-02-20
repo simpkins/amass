@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 #
-# Copyright (c) 2009, Adam Simpkins
+# Copyright (c) 2009-2010, Adam Simpkins
 #
 import errno
 import optparse
@@ -20,35 +20,16 @@ def fetch_cddb(toc, dir):
     cddb_dir = dir.layout.getCddbDir()
     os.makedirs(cddb_dir)
 
-    # Connect to CDDB, and query for matching discs
-    conn = cddb.cddbp.Connection('freedb.freedb.org')
-    matches = conn.query(toc)
+    # Query CDDB for entries for this disc
+    results = cddb.cddbp.query_cddb(toc)
 
-    # Read each match, and store it in the CDDB directory
-    for match in matches:
-        buf = conn.read(match.category, match.discId)
-        path = os.path.join(cddb_dir, match.category)
-        n = 0
-        while True:
-            if n == 0:
-                full_path = path
-            else:
-                full_path = path + '.' + str(n)
-
-            try:
-                fd = os.open(full_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                             0666)
-                break
-            except OSError, ex:
-                if ex.errno != errno.EEXIST:
-                    raise
-
-            # Continue, and try another filename
-            n += 1
-
-        print 'Writing %s' % (full_path,)
-        os.write(fd, buf)
-        os.close(fd)
+    # Store each match in the CDDB directory
+    for (category, data) in results.iteritems():
+        path = os.path.join(cddb_dir, category)
+        print 'Writing %s' % (path,)
+        data_file = file_util.open_new(path)
+        data_file.write(data)
+        data_file.close()
 
 
 def fetch_mb(toc, dir):

@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 #
-# Copyright (c) 2009, Adam Simpkins
+# Copyright (c) 2009-2010, Adam Simpkins
 #
 import re
 import socket
@@ -8,6 +8,9 @@ import sys
 
 from . import err
 from . import util
+
+FREEDB_SERVER = 'freedb.freedb.org'
+DEFAULT_SERVER = FREEDB_SERVER
 
 
 class MatchResponse(object):
@@ -195,3 +198,25 @@ class Connection(object):
             if line == '.':
                 return lines
             lines.append(line)
+
+
+def query_cddb(toc, server=DEFAULT_SERVER):
+    """
+    Query CDDB for information about the specified disc.
+
+    Returns a map of { category_name : buffer }, where the buffer contains
+    the raw CDDB data for that category.
+
+    This is just a convenience wrapper around Connection.query() and
+    Connection.read().
+    """
+    # Connect to the server, and query for matching discs
+    conn = Connection('freedb.freedb.org')
+    matches = conn.query(toc)
+
+    # Read the data for each match
+    results = {}
+    for match in matches:
+        results[match.category] = conn.read(match.category, match.discId)
+
+    return results
