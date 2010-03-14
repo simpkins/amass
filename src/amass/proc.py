@@ -51,6 +51,10 @@ class CmdTerminatedError(CmdFailedError):
         return ('command %r was terminated with signal %s' %
                 (self.getCmdString(), self.signum))
 
+class TimeoutError(CmdError):
+    def __str__(self):
+        return 'timed out reading from command %s' % (self.getCmdString(),)
+
 
 def run_cmd_any(cmd, stdin='/dev/null', stdout=PIPE, stderr=PIPE,
                 cwd=None, env=None):
@@ -80,7 +84,7 @@ def run_cmd_any(cmd, stdin='/dev/null', stdout=PIPE, stderr=PIPE,
 
 
 def run_cmd(cmd, stdin='/dev/null', stdout=PIPE, stderr=PIPE,
-            cwd=None, env=None, expected_rc=(0), expected_sig=()):
+            cwd=None, env=None, expected_rc=(0,), expected_sig=()):
     """
     Run a command, and collect the output printed on it's stdout and stderr.
 
@@ -94,7 +98,7 @@ def run_cmd(cmd, stdin='/dev/null', stdout=PIPE, stderr=PIPE,
     return (status, cmd_out, cmd_err)
 
 
-def check_status(cmd, status, expected_rc=(0), expected_sig=()):
+def check_status(cmd, status, expected_rc=(0,), expected_sig=()):
     """
     Check a command's exit status against a list of expected exit codes and
     signals.
@@ -183,10 +187,11 @@ class Proc(subprocess.Popen):
 
     def read(self, timeout=None, bufsize=4096):
         """
-        Read from the process' stdout and stderr.  Blocks until data is
-        available on either stdout or stderr.  Once data is available, a tuple
-        is returned consisting of the data read on stdout, and the data read on
-        stderr.
+        Read from the process' stdout and stderr.
+
+        Blocks until data is available on either stdout or stderr, or until the
+        timeout expires.  Once data is available, a tuple is returned
+        consisting of the data read on stdout, and the data read on stderr.
 
         If stdout is not available (e.g., it was not opened as a pipe when the
         process was started), or if the write end of the pipe has been closed by
@@ -194,6 +199,9 @@ class Proc(subprocess.Popen):
         If data becomes available on stderr before any data is ready on stdout,
         '' will be returned in the first entry of the tuple.  The return value
         for stderr behaves the same way, respective to the stderr pipe.
+
+        If the timeout expires before any data becomes available, a
+        TimeoutError will be raised.
         """
         read_fds = []
         if self.stdout is not None and not self.stdoutEOF:
@@ -204,6 +212,9 @@ class Proc(subprocess.Popen):
             return (None, None)
 
         (read_ready, ignore, ignore) = select.select(read_fds, [], [], timeout)
+
+        if not read_ready:
+            raise TimeoutError(self)
 
         if self.stdoutEOF:
             stdout_buf = None
@@ -299,3 +310,114 @@ class Proc(subprocess.Popen):
 
             time.sleep(poll_interval)
             time_left -= poll_interval
+
+
+class ProcRunner(object):
+    """
+    A ProcRunner manages a Proc object, and invokes a monitor callback whenever
+    the process prints data to stdout or stderr.
+    """
+    def __init__(self):
+        self.killOnError = True
+        self.timeout = None
+        self.expectedStatus = [0]
+        self.expectedSignals = []
+
+    def run(self, process, monitor):
+        self.monitor = monitor
+        self.process = self.getProcess(process)
+
+        try:
+            self.readOutput()
+        except:
+            if self.killOnError:
+                self.process.kill()
+            raise
+
+        # Wait for the process to exit
+        status = self.process.wait()
+        self.checkStatus(status)
+
+    def readOutput(self):
+        while True:
+            try:
+                (cmd_out, cmd_err) = self.process.read(timeout=self.timeout)
+            except TimeoutError:
+                self.timeoutExpired()
+
+            # Stop when the subprocess has closed both stdout and stderr
+            if cmd_out is None and cmd_err is None:
+                break
+
+            if cmd_out:
+                self.stdoutData(cmd_out)
+            if cmd_err:
+                self.stderrData(cmd_err)
+
+    def getProcess(self, process):
+        if isinstance(process, Proc):
+            return process
+        elif isinstance(process, list):
+            return Proc(process, stdin='/dev/null', stdout=PIPE, stderr=PIPE)
+        else:
+            raise TypeError('unexpected process argument of type %s' %
+                            type(process).__name__)
+
+    def stdoutData(self, data):
+        self.monitor.stdoutData(data)
+
+    def stderrData(self, data):
+        self.monitor.stderrData(data)
+
+    def timeoutExpired(self):
+        self.monitor.timeoutExpired()
+
+    def checkStatus(self, status):
+        check_status(self.process, status,
+                     self.expectedStatus, self.expectedSignals)
+
+
+class ProcLineMonitor(object):
+    """
+    ProcLineMonitor is a monitor that can be used with ProcRunner.
+
+    It splits the data into lines, and calls another monitor whenever another
+    full line is received.
+    """
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.stdoutSep = '\n'
+        self.stderrSep = '\n'
+        self.stdoutFragment = ''
+        self.stderrFragment = ''
+
+    def stdoutData(self, data):
+        (self.stdoutFragment, stdout_lines) = self._splitLines(
+                self.stdoutFragment, data, self.stdoutSep)
+        for line in stdout_lines:
+            self.monitor.stdoutLine(line)
+
+    def stderrData(self, data):
+        (self.stderrFragment, stderr_lines) = self._splitLines(
+                self.stderrFragment, data, self.stderrSep)
+        for line in stderr_lines:
+            self.monitor.stderrLine(line)
+
+    def timeoutExpired(self):
+        self.monitor.timeoutExpired()
+
+    def _splitLines(self, fragment, data, sep):
+        # Break the data into lines
+        lines = data.split(sep)
+
+        # Prepend the partial line fragment from the last read to the start
+        # of the first line fragment that was read this time.
+        lines[0] = fragment + lines[0]
+
+        # The last entry is just a line fragment
+        # (no terminating newline has been read for it yet).
+        # Remove it from the line list, and store it for processing
+        # on the next iteration of the loop.
+        return_fragment = lines.pop()
+
+        return (return_fragment, lines)
