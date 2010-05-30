@@ -84,6 +84,12 @@ class Monitor(object):
     def __init__(self, output):
         self.output = output
 
+        self.startSample = None
+        self.endSample = None
+
+        self.readOffset = None
+        self.writeOffset = None
+
         # We currently keep track of the locations of all uncorrected errors
         self.errors = []
         # For warnings, we only track the type of warnings we have seen.
@@ -94,15 +100,15 @@ class Monitor(object):
         self.nextWarningTime = 0
         self.suppressionInterval = 5
 
-        self.nextProgressTime = 0
-        self.progressInterval = 0.1
+        self.nextUpdateTime = 0
+        self.minUpdateInterval = 0.1
 
         # Map indicating what to do for each type of cdparanoia status
         self.functionMap = {
             # "read" indicates an offset in the disc where cdparanoia is
             # reading.  The read offset may go backwards, as cdparanoia often
             # re-reads sections of the disc for verification.
-            'read' : None,
+            'read' : self.processRead,
             # "verify" indicates that cdparanoia is verifying a run of samples.
             'verify' : None,
             'jitter' : self.processWarning,
@@ -116,7 +122,8 @@ class Monitor(object):
             'backoff' : self.processWarning,
             # "overlap" indicates that cdparanoia is re-adjusting its read
             # overlap parameter.  The offset is not actual offset, but
-            # indicates the new overlap value.
+            # indicates the new overlap value.  Higher values mean that
+            # cdparanoia is seeing more jitter, and so re-reads more data.
             'overlap' : None,
             'dropped' : self.processWarning,
             'duped' : self.processWarning,
@@ -127,63 +134,95 @@ class Monitor(object):
             # is writing to the file.  The write offset never decreases.
             'wrote' : self.processWrote,
             # "finished" output indicates that cdparanoia is done
-            'finished' : None,
+            'finished' : self.processFinished,
         }
 
     def ripStart(self, start, end):
-        self.output.log('rip starting: %d - %d' % (start, end))
+        self.startSample = start * cdrom.constants.SAMPLES_PER_FRAME
+        self.endSample = end * cdrom.constants.SAMPLES_PER_FRAME
+        self.output.initialize(self.startSample, self.endSample)
+        self.output.log('Ripping from sector %d to %d' % (start, end))
 
     def ripUpdate(self, function, offset):
+        # Multiple handlers check the current time.
+        # Compute it once now, rather than potentially having to re-obtain it
+        # in multiple places.
+        self.now = time.time()
+
         try:
             handler = self.functionMap[function]
         except KeyError, ex:
-            self.processUnknownStatus(function, offset)
-            return
+            handler = self.processUnknownStatus
 
         if handler is not None:
             handler(function, offset)
 
+        self.checkSuppressedWarnings()
+
+        if self.now > self.nextUpdateTime:
+            self.output.updateSpinner()
+            self.output.redisplay()
+            # Don't update again until minUpdateInterval has passed
+            self.nextUpdateTime = self.now + self.minUpdateInterval
+
+    def processRead(self, function, offset):
+        # Keep track of the farthest offset read,
+        # and use that to update the progress indicator.
+        #
+        # (cdparanoia may go back and re-read sectors, and we don't update the
+        # progress for those situations.)
+        if offset > self.readOffset:
+            self.readOffset = offset
+            progress_offset = offset
+            if progress_offset < self.startSample:
+                progress_offset = self.startSample
+            elif progress_offset >= self.endSample:
+                progress_offset = self.endSample - 1
+            self.output.updateProgress(progress_offset)
+
     def processWrote(self, function, offset):
-        self.ripProgress(offset)
+        # We use the read offsets to update progress; not the write updates.
+        # While the write offset is continually increasing, the writes tend
+        # to happen in bursts, making it unsuitable to use for the progress
+        # indicator.
+        #
+        # For now, we track the farthest write offset,
+        # but we don't use it for anything.
+        self.writeOffset = offset
+
+    def processFinished(self, function, offset):
+        self.output.finished()
 
     def processWarning(self, function, offset):
+        self.output.warningAt(offset, function)
         self.ripWarning(function, offset)
 
     def processSkip(self, function, offset):
+        self.output.errorAt(offset, function)
         self.ripUncorrectedError(function, offset)
 
     def processUnknownStatus(self, function, offset):
         self.ripWarning('unknown status %r' % (function,), offset)
 
-    def ripProgress(self, offset):
-        now = time.time()
-        self.checkSuppressedWarnings(now)
-
-        if now > self.nextProgressTime:
-            self.output.updateProgress(offset)
-            self.nextProgressTime = now + self.progressInterval
-
     def ripWarning(self, function, offset):
-        now = time.time()
-
         if function not in self.warningTypes:
             self.warningTypes.add(function)
-            self.printSuppressedWarnings(now)
+            self.printSuppressedWarnings(self.now)
             self.output.log('warning: %s @ %d' % (function, offset))
         else:
             self.numSuppressed += 1
-            self.checkSuppressedWarnings(now)
+            self.checkSuppressedWarnings()
 
-    def checkSuppressedWarnings(self, now):
+    def checkSuppressedWarnings(self):
         if self.numSuppressed == 0:
             return
 
-        if now < self.nextWarningTime:
+        if self.now < self.nextWarningTime:
             return
-        self.printSuppressedWarnings(now)
+        self.printSuppressedWarnings()
 
-    def printSuppressedWarnings(self, now):
-        self.nextWarningTime = now + self.suppressionInterval
+    def printSuppressedWarnings(self):
+        self.nextWarningTime = self.now + self.suppressionInterval
         if self.numSuppressed == 0:
             return
 
@@ -197,25 +236,60 @@ class Monitor(object):
 
 
 class CliOutput(object):
+    STATUS_NORMAL = ' '
+    STATUS_JITTER = '-'
+    STATUS_ERROR = '+'
+    STATUS_UNCORRECTED_ERROR = 'V'
+    STATUS_READ_HEAD = '>'
+
+    SPINNER_CHARS = r'/-\|'
+
     def __init__(self):
-        self.lastProgress = None
+        self.progressWidth = 60
+        self.progressBar = [self.STATUS_NORMAL] * self.progressWidth
+        self.spinner_index = 0
 
-    def updateProgress(self, offset):
-        self.lastProgress = offset
-        assert offset >= self.lastProgress
+    def initialize(self, start, end):
+        self.start = start
+        self.end = end
+        self.currentOffset = start
 
-        sys.stdout.write('%-78s\r' %
-                         (offset / cdrom.constants.SAMPLES_PER_FRAME,))
+    def redisplay(self):
+        buf = self.progressBar[:]
+        buf[self.getIndex(self.currentOffset)] = self.STATUS_READ_HEAD
+
+        spinner = self.SPINNER_CHARS[self.spinner_index]
+
+        sys.stdout.write('%s [%s]\r' % (spinner, ''.join(buf),))
         sys.stdout.flush()
 
-    def log(self, message):
-        sys.stdout.write(message)
-        sys.stdout.write('\n')
+    def updateProgress(self, offset):
+        self.currentOffset = offset
 
-        if self.lastProgress is not None:
-            self.updateProgress(self.lastProgress)
-        else:
-            sys.stdout.flush()
+    def updateSpinner(self):
+        self.spinner_index += 1
+        if self.spinner_index >= len(self.SPINNER_CHARS):
+            self.spinner_index = 0
+
+    def warningAt(self, offset, type):
+        idx = self.getIndex(offset)
+        if self.progressBar[idx] == self.STATUS_NORMAL:
+            self.progressBar[idx] = self.STATUS_WARNING
+
+    def errorAt(self, offset, type):
+        idx = self.getIndex(offset)
+        self.progressBar[idx] = self.STATUS_UNCORRECTED_ERROR
+
+    def getIndex(self, offset):
+        percent = float(offset - self.start) / float(self.end - self.start)
+        return int(percent * self.progressWidth)
+
+    def log(self, message):
+        sys.stdout.write('%-78s\n' % (message,))
+        self.redisplay()
+
+    def finished(self):
+        sys.stdout.write('\n')
 
 
 def rip_track(device, track_number, output_path):
