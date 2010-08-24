@@ -49,6 +49,7 @@ import sys
 import shutil
 
 import amass.cdrom
+import amass.archive
 
 RETCODE_SUCCESS = 0
 RETCODE_ARGUMENTS_ERROR = 1
@@ -246,18 +247,7 @@ def merge_tracks(output_path, track_list, header_track_path=None):
 
 
 def process_archive_dir(output_path, dir):
-    try:
-        toc_path = os.path.join(dir, 'full_toc.raw')
-        tocf = open(toc_path, 'rb')
-    except OSError, ex:
-        if ex.errno == errno.EEXIST:
-            raise Exception('%s does not appear to be a CD archive directory: '
-                            'no such file %r' % (dir, toc_path))
-
-    toc_data = tocf.read()
-    tocf.close()
-
-    toc = amass.cdrom.FullTOC(toc_data)
+    toc = dir.album.toc
 
     track_info_list = []
     for track in toc.tracks:
@@ -265,12 +255,13 @@ def process_archive_dir(output_path, dir):
             continue
         # We could check to make sure that the track data files actually exist
         # here, but merge_tracks will verify everything before it starts.
-        track_path = os.path.join(dir, 'track%02d.bin' % (track.number,))
+        track_path = os.path.join(dir.layout.getDataTrackDir(),
+                                  'track%02d.bin' % (track.number,))
         track_info = TrackInfo(track_path, track.address.lba)
         track_info_list.append(track_info)
 
     header_track_num = toc.sessions[-1].firstTrack
-    header_track_path = os.path.join(dir,
+    header_track_path = os.path.join(dir.layout.getDataTrackDir(),
                                      'track%02d.bin' % (header_track_num,))
 
     return merge_tracks(output_path, track_info_list, header_track_path)
@@ -294,7 +285,8 @@ def main(argv):
         return RETCODE_SUCCESS
 
     if options.archiveDir:
-        return process_archive_dir(options.outputPath, options.archiveDir)
+        dir = amass.archive.AlbumDir(options.archiveDir)
+        return process_archive_dir(options.outputPath, dir)
     else:
         return merge_tracks(options.outputPath, options.tracks)
 
