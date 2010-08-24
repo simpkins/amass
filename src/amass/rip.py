@@ -297,3 +297,5 @@ def rip_track(device, track_number, output_path):
     monitor = Monitor(output)
     ripper = Ripper(device, track_number, output_path, monitor)
     ripper.run()
+
+    return (monitor.errors, monitor.warningTypes)

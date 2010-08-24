@@ -10,6 +10,7 @@ from .. import cdrom
 from .. import cddb
 from .. import mb
 from .. import metadata
+from . import err
 
 
 class AlbumDir(object):
@@ -26,7 +27,7 @@ class AlbumDir(object):
             toc_file = open(toc_path, 'rb')
         except IOError, ex:
             if ex.errno == errno.ENOENT:
-                raise NotAnAlbumDirError(self.layout.path)
+                raise err.NotAnAlbumDirError(self.layout.path)
             raise
 
         toc_buf = toc_file.read()

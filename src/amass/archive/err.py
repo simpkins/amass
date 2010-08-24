@@ -13,3 +13,7 @@ class NotAnAlbumDirError(ArchiveError):
         ArchiveError.__init__(self, '%r does not appear to be an album '
                               'directory' % (path,))
         self.path = path
+
+
+class RipError(ArchiveError):
+    pass

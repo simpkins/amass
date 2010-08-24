@@ -1,3 +1,5 @@
+- detect errors from cdparanoia
+
 - archive.find_track_files() should use the track length
 
 - Handle multi-part works

@@ -9,8 +9,10 @@ from .. import cdrom
 from .. import cddb
 from .. import file_util
 from .. import notify
+from .. import rip
 
 from . import album_dir
+from . import err
 
 
 class Archiver(object):
@@ -89,12 +91,21 @@ class Archiver(object):
 
     def ripAudioTrack(self, track):
         print 'Ripping audio track %d' % (track.number,)
+        # Prepare the output path
         output_name = 'track%02d.wav' % (track.number,)
         output_path = os.path.join(self.layout.getWavDir(), output_name)
         file_util.prepare_new(output_path)
-        cmd = ['cdparanoia', '-d', self.device,
-               '--', str(track.number), output_path]
-        subprocess.check_call(cmd)
+
+        # Run the ripper
+        output = rip.CliOutput()
+        monitor = rip.Monitor(output)
+        ripper = rip.Ripper(self.device, track.number, output_path, monitor)
+        ripper.run()
+
+        # Abort if there were errors
+        if monitor.errors:
+            raise err.RipError('%d errors ripping track %d' %
+                               (len(monitor.errors), track.number))
 
     def ripAudioTrack0(self):
         print 'Ripping hidden audio track 0'
