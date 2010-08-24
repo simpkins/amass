@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 from ._err import *
+from . import binary
 
 # Tracking down freely available information about CD-TEXT is a bit of a pain.
 # The definitive standard is the Red Book (there is a CD-TEXT addendum), which
