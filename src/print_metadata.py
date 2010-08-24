@@ -20,13 +20,22 @@ def print_cddb(entry):
 
 def print_cddb_entries(dir):
     cddb_entries = dir.getCddbEntries()
+    if cddb_entries is None:
+        print 'No CDDB data'
+        return
+
     for entry in cddb_entries:
         print_cddb(entry)
 
 
 def print_mb(dir):
+    mb_releases = dir.getMbReleases()
+    if mb_releases is None:
+        print 'No MusicBrainz data'
+        return
+
     n = 0
-    for release_result in dir.getMbReleases():
+    for release_result in mb_releases:
         n += 1
         print 'MusicBrainz %d: score=%s' % (n, release_result.getScore())
         release = release_result.getRelease()
