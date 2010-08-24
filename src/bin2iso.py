@@ -278,7 +278,7 @@ def main(argv):
         options.parseArgv(argv)
     except OptionsError, error:
         options.printUsage(sys.stderr)
-        error_msg(error)
+        err_msg(error)
         return RETCODE_ARGUMENTS_ERROR
     except UsageError, error:
         options.printHelp()
