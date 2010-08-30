@@ -71,6 +71,10 @@ class Merger(object):
         album = self.dir.album
 
         for track in album.itertracks():
+            # Ignore data tracks
+            if track.is_data_track:
+                continue
+
             # Update the track with information from all our sources
             for source in self.sources:
                 source.updateTrack(track)

@@ -52,7 +52,9 @@ class Album(object):
         # Add a TrackInfo object for each track
         index = self.toc.tracks[0].number
         for track_info in self.toc.tracks:
-            self.__tracks.append(track.TrackInfo(track_info.number))
+            md_track = track.TrackInfo(track_info.number,
+                                       track_info.isDataTrack())
+            self.__tracks.append(md_track)
             # Assert that all the tracks are consecutive.
             # (This is required by the Red Book)
             assert track_info.number == index
