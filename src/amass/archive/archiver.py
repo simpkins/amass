@@ -48,6 +48,13 @@ class Archiver(object):
 
         # Store the CD-TEXT data
         if cd_text_buf is not None:
+            # Parse the CD-TEXT data to make sure it looks valid.
+            # If there was an error reading the data, checksum validation
+            # should hopefully fail.
+            # TODO: it would be nice to catch the checksum failure and retry to
+            # read the data.
+            cd_text = cdrom.cdtext.parse(cd_text_buf)
+
             cd_text_file = file_util.open_new(self.layout.getCdTextPath())
             cd_text_file.write(cd_text_buf)
             cd_text_file.close()
@@ -59,6 +66,7 @@ class Archiver(object):
         # Store extra track information via icedax
         # (This includes things like the locations of the indices and
         # pregap within each track, the ISRC numbers, and the MCN number.)
+        print 'Reading track metadata (this may take some time)...'
         icedax_dir = self.layout.getIcedaxDir()
         os.makedirs(icedax_dir)
         cdrom.icedax.write_info_files(self.device, icedax_dir)
