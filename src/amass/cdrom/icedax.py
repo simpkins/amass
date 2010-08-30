@@ -101,6 +101,8 @@ class TrackInfo(object):
         return int(v)
 
     def getQuotedField(self, name):
+        # icedax just wraps whatever value it has in single quotes.
+        # If the value contains internal single quotes, they aren't escaped.
         m = self.matchField(name, "^'(.*)'$")
         return m.group(1)
 
