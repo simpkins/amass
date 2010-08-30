@@ -559,16 +559,27 @@ class Parser(object):
         # XXX: Should we use pack.charPosition in the following code?
         # It doesn't really seem to be very useful.
 
+        track_number = pack.trackNumber
         for data in strings[:-1]:
             full_text = self.pendingText + data
-            self.__handleTextField(full_text, pack)
+            self.__handleTextField(full_text, pack, track_number)
             self.pendingText = ''
+            # The track number increments between each string.
+            # This is necessary for when a title is short enough so that
+            # it appears in the middle of a pack.  e.g., the pack starts with
+            # the end of the previous title, contains the entire title for one
+            # track, then continues with the start of the title for the next
+            # track.  The track title in the middle doesn't get its own pack;
+            # no pack contains it's track number.
+            track_number += 1
 
         self.pendingText += strings[-1]
 
-    def __handleTextField(self, text, pack):
+    def __handleTextField(self, text, pack, track_number):
         # Some packs are padded with NUL bytes.
         # Ignore text if it is empty
+        # TODO: This isn't quite right.  This ignores fields that are
+        # legitimately the empty string.
         if not text:
             return
 
@@ -591,7 +602,7 @@ class Parser(object):
         # Just store the field for now.
         # We will decode the text to unicode once we have parsed
         # the encoding from the "Size Info" packs
-        field = Field(pack.blockNumber, pack.id, pack.trackNumber, text)
+        field = Field(pack.blockNumber, pack.id, track_number, text)
         self.__addField(field)
 
     def __addField(self, field):
