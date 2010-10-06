@@ -58,6 +58,8 @@ def tag_files(info_list):
     for info in info_list:
         print info.path
         comments = []
+
+        # Set all of the metadata fields
         for field in info.metadata.fields.itervalues():
             if field.value is None:
                 continue
@@ -68,6 +70,9 @@ def tag_files(info_list):
                 continue
 
             update_comments(comments, vorbis_name, field.value)
+
+        # Set TRACKNUMBER
+        comments.append(('TRACKNUMBER', '%d' % (info.metadata.number,)))
 
 
         # FIXME: We probably don't want to remove stuff like
