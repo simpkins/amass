@@ -36,7 +36,7 @@ class Album(object):
         # Initialize self.__tracks[0], based on whether or not there is a
         # hidden audio track after the pre-gap and before the first track.
         if self.toc.hasAudioTrack0():
-            self.__tracks.append(track.TrackInfo(0))
+            self.__tracks.append(track.TrackInfo(0, False))
         else:
             self.__tracks.append(None)
 

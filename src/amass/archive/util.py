@@ -5,6 +5,8 @@
 import os
 import re
 
+from .. import cdrom
+
 
 class FileInfo(object):
     def __init__(self, path, metadata):
