@@ -44,7 +44,7 @@ def find_track_files(dir, suffix, album):
     info_list = []
     for filename in files:
         # Find all numbers in the filename
-        numbers = [int(n) for n in re.findall(r'\d+', filename)]
+        numbers = set([int(n) for n in re.findall(r'\d+', filename)])
 
         # Prune out numbers that aren't valid track numbers for this album
         possible_numbers = []
@@ -70,15 +70,15 @@ def find_track_files(dir, suffix, album):
         # patterns in the names, to try and figure out where the track number
         # is.  (e.g., the number always comes at the very beginning, or always
         # comes after the artist name, etc.)
-        if not numbers:
+        if not possible_numbers:
             raise Exception('no track number found in filename %r' %
                             (filename,))
-        if len(numbers) != 1:
+        if len(possible_numbers) != 1:
             raise Exception('multiple possible track numbers found in '
-                            'filename %r: %s' % (filename, numbers))
+                            'filename %r: %s' % (filename, possible_numbers))
 
         # Make sure there are no duplicates
-        number = numbers[0]
+        number = possible_numbers[0]
         if numbers_to_name.has_key(number):
             raise Exception('multiple files found for track number %d: '
                             '%r and %r' %
