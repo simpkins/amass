@@ -38,16 +38,23 @@ def find_track_files(dir, suffix, album):
     #
     # We currently expect an exact 1:1 mapping
     #
+    # First examine all of the filenames, and look for numbers in the name.
+    #
     # TODO: At the moment, we look only at the filename.
-    # We should also support looking at the file metadata, if present
-    numbers_to_name = {}
-    info_list = []
+    # We should also support looking at the file metadata, if present.
+    # We should also support looking at the file length, and comparing
+    # it with the track lengths from the table of contents
+    possible_numbers = {}
     for filename in files:
         # Find all numbers in the filename
+        #
+        # TODO  It would be nice to detect patterns in the names, to try and
+        # figure out where the track number is.  (e.g., the number always comes
+        # at the very beginning, or always comes after the artist name, etc.)
         numbers = set([int(n) for n in re.findall(r'\d+', filename)])
 
         # Prune out numbers that aren't valid track numbers for this album
-        possible_numbers = []
+        possibilities = []
         for number in numbers:
             if number == 0:
                 if not album.toc.hasAudioTrack0():
@@ -61,30 +68,43 @@ def find_track_files(dir, suffix, album):
                     continue
                 track_len = track.endAddress - track.address
 
-            # TODO: Check the length of this file, and use it to help
-            # guess if it this file is a good match for this track.
-            possible_numbers.append(number)
+            possibilities.append(number)
 
-        # TODO: For now, we require there to be exactly 1 number in each name.
-        # This certainly won't be good enough in the future.  We should detect
-        # patterns in the names, to try and figure out where the track number
-        # is.  (e.g., the number always comes at the very beginning, or always
-        # comes after the artist name, etc.)
-        if not possible_numbers:
-            raise Exception('no track number found in filename %r' %
-                            (filename,))
-        if len(possible_numbers) != 1:
-            raise Exception('multiple possible track numbers found in '
-                            'filename %r: %s' % (filename, possible_numbers))
+            if not possibilities:
+                raise Exception('no track number found in filename %r' %
+                                (filename,))
+        possible_numbers[filename] = possibilities
 
-        # Make sure there are no duplicates
-        number = possible_numbers[0]
-        if numbers_to_name.has_key(number):
-            raise Exception('multiple files found for track number %d: '
-                            '%r and %r' %
-                            (number, numbers_to_name[number], filename))
+    # Next process the results, and make number to name assignments
+    info_list = []
+    while possible_numbers:
+        # Find a filename that has exactly 1 possibility
+        for filename, numbers in possible_numbers.iteritems():
+            if len(numbers) == 1:
+                break
+        else:
+            remaining = '\n  '.join(('%s: %s' % (name, numbers)
+                                     for name, numbers in possible_numbers))
+            raise Exception('unable to determine track numbers for all '
+                            'tracks:\n  ' + remaining)
 
-        numbers_to_name[number] = filename
+        # TODO: Check the length of this file, and use it to help
+        # guess if it this file is a good match for this track.
+        number = numbers[0]
+
+        # Remove this filename from the list remaining to be processed
+        del possible_numbers[filename]
+        # Remove this number from the possibilities for the other tracks
+        for (fn, nums) in possible_numbers.iteritems():
+            try:
+                nums.remove(number)
+                if not nums:
+                    raise Exception('multiple files found for track number '
+                                    '%d: %r and %r' %
+                                    (number, filename, fn))
+            except ValueError:
+                # number wasn't in nums
+                pass
 
         path = os.path.join(dir, filename)
         track = album.track(number)
