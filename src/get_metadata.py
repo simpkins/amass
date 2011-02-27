@@ -28,7 +28,7 @@ def fetch_cddb(toc, dir):
         path = os.path.join(cddb_dir, category)
         print 'Writing %s' % (path,)
         data_file = file_util.open_new(path)
-        data_file.write(data)
+        data_file.write(data.encode('UTF-8'))
         data_file.close()
 
 
