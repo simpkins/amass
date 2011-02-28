@@ -124,3 +124,6 @@ class DirLayout(object):
 
     def getFlacDir(self):
         return os.path.join(self.path, 'flac')
+
+    def getMp3Dir(self):
+        return os.path.join(self.path, 'mp3')
