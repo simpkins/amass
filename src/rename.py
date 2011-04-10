@@ -4,6 +4,7 @@
 #
 import optparse
 import os
+import pipes
 import sys
 
 from amass import archive
@@ -51,7 +52,8 @@ def rename_files(info_list):
             raise Exception('An file named %r already exists while '
                             'renaming %r' % (new_path, old_path))
 
-        print 'Renaming %r --> %r' % (info.name, new_name)
+        print 'Renaming %s --> %s' % (pipes.quote(info.name),
+                                      pipes.quote(new_name))
         os.rename(old_path, new_path)
 
 

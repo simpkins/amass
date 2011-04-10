@@ -13,10 +13,12 @@ class CliChooser(ChooserBase):
         self.confidenceThreshold = threshold
 
     def write(self, msg):
+        if isinstance(msg, unicode):
+            msg = msg.encode('utf-8')
         sys.stdout.write(msg)
 
     def writeln(self, msg):
-        sys.stdout.write(msg)
+        self.write(msg)
         sys.stdout.write('\n')
 
     def writeField(self, track_number, field):
@@ -32,11 +34,11 @@ class CliChooser(ChooserBase):
         else:
             conf_color = COLOR_GREEN
 
-        fmt_str = ('{track_number:2} {field.name:<15} '
-                   '{color_conf}'
-                   '{field.candidates.preferredChoice.confidence:3}'
-                   '{color_reset}  '
-                   '{field.candidates.preferredChoice.value}')
+        fmt_str = (u'{track_number:2} {field.name:<15} '
+                   u'{color_conf}'
+                   u'{field.candidates.preferredChoice.confidence:3}'
+                   u'{color_reset}  '
+                   u'{field.candidates.preferredChoice.value}')
         s = fmt_str.format(track_number=track_number, field=field,
                            color_conf=conf_color,
                            color_reset=COLOR_RESET)

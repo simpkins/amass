@@ -68,7 +68,10 @@ class Field(object):
         return SCORE_GOOD
 
     def __str__(self):
-        return str(self.value)
+        return unicode(self.value).encode('utf-8')
+
+    def __unicode__(self):
+        return unicode(self.value)
 
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.value)

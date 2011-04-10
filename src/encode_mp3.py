@@ -26,7 +26,7 @@ def get_tag_options(track):
         value = track.fields[name].value
         if value is not None:
             options.append(arg)
-            options.append(str(value))
+            options.append(unicode(value).encode('utf-8'))
 
     # genre
     genre = track.fields['genre'].value
