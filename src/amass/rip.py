@@ -207,7 +207,7 @@ class Monitor(object):
     def ripWarning(self, function, offset):
         if function not in self.warningTypes:
             self.warningTypes.add(function)
-            self.printSuppressedWarnings(self.now)
+            self.printSuppressedWarnings()
             self.output.log('warning: %s @ %d' % (function, offset))
         else:
             self.numSuppressed += 1
@@ -237,9 +237,8 @@ class Monitor(object):
 
 class CliOutput(object):
     STATUS_NORMAL = ' '
-    STATUS_JITTER = '-'
-    STATUS_ERROR = '+'
-    STATUS_UNCORRECTED_ERROR = 'V'
+    STATUS_WARNING = '*'
+    STATUS_UNCORRECTED_ERROR = '!'
     STATUS_READ_HEAD = '>'
 
     SPINNER_CHARS = r'/-\|'
