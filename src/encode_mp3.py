@@ -76,8 +76,8 @@ def main(argv):
     f.close()
 
     # Find the .wav files
-    wav_info_list = archive.util.find_track_files(dir.layout.getWavDir(), '.wav',
-                                                  dir.album)
+    wav_info_list = archive.util.find_track_files(dir.layout.getWavDir(),
+                                                  '.wav', dir.album)
 
     mp3_dir = dir.layout.getMp3Dir()
     try:
