@@ -14,12 +14,21 @@ from . import err
 
 
 class AlbumDir(object):
-    def __init__(self, path, new=False):
+    def __init__(self, path, new_toc=None):
+        """
+        AlbumDir(path, new_toc=None)
+
+        Create a new AlbumDir object.  For existing directories, new_toc should
+        be None, and the table of contents will be loaded from the directory.
+        When creating a new directory, new_toc should be an amass.cdrom.FullTOC
+        object containing the table of contents of the disc.
+        """
         self.layout = DirLayout(path)
-        if new:
-            self.album = None
+        if new_toc is None:
+            toc = self.__loadToc()
         else:
-            self.album = metadata.album.Album(self.__loadToc())
+            toc = new_toc
+        self.album = metadata.album.Album(toc)
 
     def __loadToc(self):
         toc_path = self.layout.getTocPath()

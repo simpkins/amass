@@ -6,6 +6,8 @@ import optparse
 import sys
 
 from amass import archive
+from amass import cddb
+from amass import mb
 
 
 def main(argv):
@@ -14,6 +16,9 @@ def main(argv):
     parser.add_option('-d', '--device', action='store',
                       dest='device', default='/dev/cdrom',
                       metavar='DEVICE', help='The CD-ROM device')
+    parser.add_option('--only', action='store_true',
+                      dest='archive_only', default=False,
+                      help='Only archive the CD data, do not fetch metadata')
 
     (options, args) = parser.parse_args(argv[1:])
 
@@ -23,7 +28,14 @@ def main(argv):
         return 1
 
     archiver = archive.Archiver(options.device)
-    archiver.archive()
+    dir = archiver.archive()
+
+    if options.archive_only:
+        return os.EX_OK
+
+    toc = dir.album.toc
+    cddb.fetch_cddb(toc, dir)
+    mb.fetch_mb(toc, dir)
 
 
 if __name__ == '__main__':

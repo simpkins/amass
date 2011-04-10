@@ -37,7 +37,7 @@ class Archiver(object):
         cddb_id = cddb.get_cddb_id(self.toc)
 
         # Create the album directory
-        self.outputDir = album_dir.AlbumDir('%08x' % (cddb_id,), new=True)
+        self.outputDir = album_dir.AlbumDir('%08x' % (cddb_id,), self.toc)
         self.layout = self.outputDir.layout
         print 'Archiving CD data to %s%s' % (self.layout.path, os.sep)
 
@@ -73,6 +73,8 @@ class Archiver(object):
 
         # Store the track data
         self.archiveTracks()
+
+        return self.outputDir
 
     def archiveTracks(self):
         # If this CD has hidden audio data before the first track,

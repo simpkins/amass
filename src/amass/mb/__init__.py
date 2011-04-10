@@ -4,3 +4,4 @@
 #
 from .disc_id import get_mb_id
 from .query import *
+from .fetch import fetch_mb
