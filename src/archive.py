@@ -18,6 +18,10 @@ def main(argv):
     parser.add_option('-d', '--device', action='store',
                       dest='device', default='/dev/cdrom',
                       metavar='DEVICE', help='The CD-ROM device')
+    parser.add_option('--resume', action='store_true',
+                      dest='resume', default=False,
+                      help='Resume a previously failed/aborted archive '
+                      'operation')
     parser.add_option('--only', action='store_true',
                       dest='archive_only', default=False,
                       help='Only archive the CD data, do not fetch metadata')
@@ -31,7 +35,10 @@ def main(argv):
 
     # Save the data off the physical CD
     archiver = archive.Archiver(options.device)
-    dir = archiver.archive()
+    if options.resume:
+        dir = archiver.resume()
+    else:
+        dir = archiver.archive()
 
     if options.archive_only:
         return os.EX_OK
