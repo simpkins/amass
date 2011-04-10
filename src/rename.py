@@ -88,6 +88,7 @@ def main(argv):
     # Rename the audio files
     process_track_dir(dir.layout.getWavDir(), '.wav', dir.album)
     process_track_dir(dir.layout.getFlacDir(), '.flac', dir.album)
+    process_track_dir(dir.layout.getMp3Dir(), '.mp3', dir.album)
 
 
 if __name__ == '__main__':
