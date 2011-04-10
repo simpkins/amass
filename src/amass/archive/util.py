@@ -46,12 +46,17 @@ def find_track_files(dir, suffix, album):
     # it with the track lengths from the table of contents
     possible_numbers = {}
     for filename in files:
+        # Only examine the base part of the filename.
+        # For mp3 files, we don't want to treat the "3" in the extension as a
+        # possible track number
+        base, ext = os.path.splitext(filename)
+
         # Find all numbers in the filename
         #
         # TODO  It would be nice to detect patterns in the names, to try and
         # figure out where the track number is.  (e.g., the number always comes
         # at the very beginning, or always comes after the artist name, etc.)
-        numbers = set([int(n) for n in re.findall(r'\d+', filename)])
+        numbers = set([int(n) for n in re.findall(r'\d+', base)])
 
         # Prune out numbers that aren't valid track numbers for this album
         possibilities = []
@@ -83,8 +88,9 @@ def find_track_files(dir, suffix, album):
             if len(numbers) == 1:
                 break
         else:
-            remaining = '\n  '.join(('%s: %s' % (name, numbers)
-                                     for name, numbers in possible_numbers))
+            possibilities = ['%s: %s' % (name, numbers)
+                             for name, numbers in possible_numbers.iteritems()]
+            remaining = '\n  '.join(possibilities)
             raise Exception('unable to determine track numbers for all '
                             'tracks:\n  ' + remaining)
 
