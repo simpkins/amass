@@ -5,7 +5,7 @@
 import os
 
 from .. import cdrom
-from . import merge
+from .merge.candidates import CandidateList
 
 
 class Source(object):
@@ -35,7 +35,7 @@ class DataSourceBase(Source):
 
     def updateField(self, field, value):
         if field.candidates is None:
-            field.candidates = merge.CandidateList(field)
+            field.candidates = CandidateList(field)
         field.candidates.addCandidate(value, self)
 
 

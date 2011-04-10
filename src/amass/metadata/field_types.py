@@ -38,8 +38,8 @@ class Field(object):
         self.sortKey = 0
         self.value = None
 
-        # The candidates is set to a merge.CandidatesList object when
-        # merging metadata information from multiple sources.
+        # The candidates is set to a merge.candidates.CandidatesList object
+        # when merging metadata information from multiple sources.
         self.candidates = None
 
     def set(self, value):
