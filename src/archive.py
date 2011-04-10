@@ -7,7 +7,9 @@ import sys
 
 from amass import archive
 from amass import cddb
+from amass import file_util
 from amass import mb
+from amass import metadata
 
 
 def main(argv):
@@ -27,15 +29,24 @@ def main(argv):
         print >> sys.stderr, 'trailing arguments: %s' % (args,)
         return 1
 
+    # Save the data off the physical CD
     archiver = archive.Archiver(options.device)
     dir = archiver.archive()
 
     if options.archive_only:
         return os.EX_OK
 
+    # Fetch metadata information from CDDB and MusicBrainz
     toc = dir.album.toc
     cddb.fetch_cddb(toc, dir)
     mb.fetch_mb(toc, dir)
+
+    # Merge the metadata information
+    metadata.merge.automerge(dir)
+    chooser = metadata.merge.CliChooser(dir, 100)
+    chooser.choose()
+    with file_util.open_new(dir.layout.getMetadataInfoPath()) as f:
+        dir.album.writeTracks(f)
 
 
 if __name__ == '__main__':
