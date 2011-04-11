@@ -19,3 +19,18 @@ class CdTextNotSupportedError(CdError):
 
 class CdTextError(CdError):
     pass
+
+class NoDiscError(CdError):
+    def __init__(self, device):
+        CdError.__init__(self, 'no disc in drive %s' % (device,))
+        self.device = device
+
+class TrayOpenError(CdError):
+    def __init__(self, device):
+        CdError.__init__(self, '%s: tray is open' % (device,))
+        self.device = device
+
+class DriveNotReadyError(CdError):
+    def __init__(self, device):
+        CdError.__init__(self, 'drive %s is not ready' % (device,))
+        self.device = device

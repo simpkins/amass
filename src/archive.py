@@ -7,6 +7,7 @@ import sys
 
 from amass import archive
 from amass import cddb
+from amass import cdrom
 from amass import file_util
 from amass import mb
 from amass import metadata
@@ -18,6 +19,9 @@ def main(argv):
     parser.add_option('-d', '--device', action='store',
                       dest='device', default='/dev/cdrom',
                       metavar='DEVICE', help='The CD-ROM device')
+    parser.add_option('-e', '--eject',
+                      action='store_true', default=False,
+                      help='Eject after the archive operation completes')
     parser.add_option('--resume', action='store_true',
                       dest='resume', default=False,
                       help='Resume a previously failed/aborted archive '
@@ -54,6 +58,10 @@ def main(argv):
     chooser.choose()
     with file_util.open_new(dir.layout.getMetadataInfoPath()) as f:
         dir.album.writeTracks(f)
+
+    if options.eject:
+        with cdrom.binary.Device(options.device) as device:
+            device.eject()
 
 
 if __name__ == '__main__':

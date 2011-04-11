@@ -18,20 +18,21 @@ from . import err
 
 class Archiver(object):
     def __init__(self, device):
-        self.device = device
+        self.device_name = device
 
     def archive(self):
         # Read the TOC and CD-TEXT data
-        device = cdrom.binary.Device(self.device)
-        full_toc_buf = cdrom.binary.read_full_toc(device)
-        try:
-            cd_text_buf = cdrom.binary.read_cd_text(device)
-        except cdrom.NoCdTextError:
-            cd_text_buf = None
-        except cdrom.CdTextNotSupportedError, ex:
-            notify.warn(str(ex))
-            cd_text_buf = None
-        device.close()
+        # Note that we close the device after reading this data,
+        # so that the track rippers can have exclusive access to the device
+        with cdrom.binary.Device(self.device_name) as device:
+            full_toc_buf = cdrom.binary.read_full_toc(device)
+            try:
+                cd_text_buf = cdrom.binary.read_cd_text(device)
+            except cdrom.NoCdTextError:
+                cd_text_buf = None
+            except cdrom.CdTextNotSupportedError, ex:
+                notify.warn(str(ex))
+                cd_text_buf = None
 
         # Compute the CDDB ID, to use for the output directory name
         self.toc = cdrom.FullTOC(full_toc_buf)
@@ -70,7 +71,7 @@ class Archiver(object):
         print 'Reading track metadata (this may take some time)...'
         icedax_dir = self.layout.getIcedaxDir()
         os.makedirs(icedax_dir)
-        cdrom.icedax.write_info_files(self.device, icedax_dir)
+        cdrom.icedax.write_info_files(self.device_name, icedax_dir)
 
         # Store the track data
         self.archiveTracks()
@@ -93,9 +94,8 @@ class Archiver(object):
         occur, so this usually should do the right thing.)
         """
         # Read the TOC so we can compute the CDDB ID
-        device = cdrom.binary.Device(self.device)
-        full_toc_buf = cdrom.binary.read_full_toc(device)
-        device.close()
+        with cdrom.binary.Device(self.device_name) as device:
+            full_toc_buf = cdrom.binary.read_full_toc(device)
         full_toc = cdrom.FullTOC(full_toc_buf)
         cddb_id = cddb.get_cddb_id(full_toc)
 
@@ -129,7 +129,7 @@ class Archiver(object):
             return
         print 'Saving data track %d' % (track.number,)
         file_util.prepare_new(output_path)
-        cmd = ['readom', 'dev=' + self.device,
+        cmd = ['readom', 'dev=' + self.device_name,
                'sectors=%d-%d' % (track.address.lba, track.endAddress.lba),
                'f=' + output_path]
         try:
@@ -150,7 +150,8 @@ class Archiver(object):
         # Run the ripper
         output = rip.CliOutput()
         monitor = rip.Monitor(output)
-        ripper = rip.Ripper(self.device, track.number, output_path, monitor)
+        ripper = rip.Ripper(self.device_name, track.number,
+                            output_path, monitor)
         try:
             ripper.run()
         except:
@@ -175,7 +176,7 @@ class Archiver(object):
         # cdparanoia will rip audio data before track 1 by specifying
         # the track number as 0.  It starts ripping just after the pre-gap
         # (MSF 00:02:00, LBA 0), and continues up to the first track.
-        cmd = ['cdparanoia', '-d', self.device, '--', '0', output_path]
+        cmd = ['cdparanoia', '-d', self.device_name, '--', '0', output_path]
         try:
             subprocess.check_call(cmd)
         except:
