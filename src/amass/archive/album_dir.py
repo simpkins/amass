@@ -107,6 +107,9 @@ class DirLayout(object):
     def getTocPath(self):
         return os.path.join(self.getMetadataDir(), 'full_toc.raw')
 
+    def getRipLogDir(self):
+        return os.path.join(self.getMetadataDir(), 'rip_logs')
+
     def getMetadataInfoPath(self):
         return os.path.join(self.getMetadataDir(), 'info')
 

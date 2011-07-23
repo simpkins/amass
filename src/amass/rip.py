@@ -7,8 +7,9 @@ import subprocess
 import sys
 import time
 
-from . import proc
 from . import cdrom
+from . import proc
+from . import simplelog
 
 
 class Ripper(object):
@@ -37,6 +38,7 @@ class Ripper(object):
         process = proc.Proc(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
         runner.run(process, monitor)
+        self.monitor.ripComplete()
 
     def stdoutLine(self, line):
         # We don't really care about lines printed to stdout.
@@ -80,9 +82,14 @@ class Ripper(object):
         self.monitor.ripUpdate(function, offset)
 
 
+
 class Monitor(object):
-    def __init__(self, output):
+    def __init__(self, output, log=None):
         self.output = output
+        if log is None:
+            self.log = simplelog.NullLogger()
+        else:
+            self.log = log
 
         self.startSample = None
         self.endSample = None
@@ -95,6 +102,7 @@ class Monitor(object):
         # For warnings, we only track the type of warnings we have seen.
         # On discs with errors, the number of warnings can be extremely high.
         self.warningTypes = set()
+        self.numWarnings = 0
 
         self.numSuppressed = 0
         self.nextWarningTime = 0
@@ -140,6 +148,10 @@ class Monitor(object):
     def ripStart(self, start, end):
         self.startSample = start * cdrom.constants.SAMPLES_PER_FRAME
         self.endSample = end * cdrom.constants.SAMPLES_PER_FRAME
+
+        self.log.info('Ripping from sector %d to %d (sample %d to %d)',
+                      start, end, self.startSample, self.endSample)
+
         self.output.initialize(self.startSample, self.endSample)
         self.output.log('Ripping from sector %d to %d' % (start, end))
 
@@ -148,6 +160,8 @@ class Monitor(object):
         # Compute it once now, rather than potentially having to re-obtain it
         # in multiple places.
         self.now = time.time()
+
+        self.log.debug('%s @ %s' % (function, offset))
 
         try:
             handler = self.functionMap[function]
@@ -164,6 +178,11 @@ class Monitor(object):
             self.output.redisplay()
             # Don't update again until minUpdateInterval has passed
             self.nextUpdateTime = self.now + self.minUpdateInterval
+
+    def ripComplete(self):
+        self.printSuppressedWarnings()
+        self.log.info('Rip complete: %d errors, %d warnings',
+                      len(self.errors), self.numWarnings)
 
     def processRead(self, function, offset):
         # Keep track of the farthest offset read,
@@ -205,6 +224,9 @@ class Monitor(object):
         self.ripWarning('unknown status %r' % (function,), offset)
 
     def ripWarning(self, function, offset):
+        self.log.warning('rip warning: %s @ %s', function, offset)
+        self.numWarnings += 1
+
         if function not in self.warningTypes:
             self.warningTypes.add(function)
             self.printSuppressedWarnings()
@@ -231,6 +253,7 @@ class Monitor(object):
         self.numSuppressed = 0
 
     def ripUncorrectedError(self, function, offset):
+        self.log.error('rip error: %s @ %s', function, offset)
         self.errors.append((function, offset))
         self.output.log('uncorrected %s @ %d' % (function, offset))
 
@@ -300,9 +323,9 @@ class CliOutput(object):
         sys.stdout.write('\n')
 
 
-def rip_track(device, track_number, output_path):
+def rip_track(device, track_number, output_path, log=None):
     output = CliOutput()
-    monitor = Monitor(output)
+    monitor = Monitor(output, log)
     ripper = Ripper(device, track_number, output_path, monitor)
     ripper.run()
 

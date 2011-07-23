@@ -5,12 +5,14 @@
 import os
 import subprocess
 import sys
+import traceback
 
 from .. import cdrom
 from .. import cddb
 from .. import file_util
 from .. import notify
 from .. import rip
+from .. import simplelog
 
 from . import album_dir
 from . import err
@@ -144,17 +146,26 @@ class Archiver(object):
         if self._skip_existing(output_path, skip_existing):
             return
 
+        # Prepare the log path
+        log_name = 'track%02d.log' % (track.number,)
+        log_path = os.path.join(self.layout.getRipLogDir(), log_name)
+
         print 'Ripping audio track %d' % (track.number,)
         file_util.prepare_new(output_path)
+        file_util.prepare_new(log_path)
+
+        log = simplelog.FileLogger(log_path, simplelog.INFO)
+        log.info('Ripping audio track %d' % (track.number,))
 
         # Run the ripper
         output = rip.CliOutput()
-        monitor = rip.Monitor(output)
+        monitor = rip.Monitor(output, log)
         ripper = rip.Ripper(self.device_name, track.number,
                             output_path, monitor)
         try:
             ripper.run()
         except:
+            log.error('Error ripping audio track: %s', traceback.format_exc())
             self._output_failure(output_path)
 
         # Abort if there were errors
