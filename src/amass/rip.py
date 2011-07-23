@@ -280,6 +280,15 @@ class CliOutput(object):
         self.progressBar[idx] = self.STATUS_UNCORRECTED_ERROR
 
     def getIndex(self, offset):
+        # Cap the allowed values.
+        # cdparanoia may read slightly before the beginning of the track or
+        # slightly after the end.  Just report the beginning and end indices in
+        # this case.
+        if offset < self.start:
+            return 0
+        elif offset >= self.end:
+            return self.progressWidth - 1
+
         percent = float(offset - self.start) / float(self.end - self.start)
         return int(percent * self.progressWidth)
 
