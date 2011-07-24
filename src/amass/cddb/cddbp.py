@@ -106,7 +106,7 @@ class Connection(object):
             matches = self.readUntilDot()
         elif code == 211 or code == 202:
             # No match found
-            raise err.NoMatchesError(disc_id)
+            return []
         else:
             raise err.ProtocolError('server %s:%s responded with unexpected '
                                     'query response code %d: %r' %
