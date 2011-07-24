@@ -6,25 +6,12 @@ import os
 import re
 
 from .. import cdrom
+from .. import file_util
 
 
 class FileInfo(object):
     def __init__(self, path, metadata):
-        # We generally encode the path names as UTF-8 when writing them.
-        # When reading path names, attempt to decode them from UTF-8 and
-        # convert them back to a unicode string.  This way we can compare them
-        # with the unicode strings that we use internally.
-        if isinstance(path, str):
-            try:
-                self.path = path.decode('utf-8')
-            except UnicodeDecodeError:
-                # Not a valid UTF-8 string.  Just keep using the plain
-                # byte array
-                self.path = path
-        else:
-            # Already a unicode string
-            self.path = path
-
+        self.path = file_util.decode_path(path)
         self.metadata = metadata
 
     @property

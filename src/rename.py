@@ -9,18 +9,7 @@ import sys
 
 from amass import archive
 from amass import metadata
-
-
-def safe_filename(name):
-    """
-    safe_filename(name) --> name
-
-    Make a string safe for use as a file name.
-    """
-    # TODO: It would be nice to strip out non-printable characters, or replace
-    # them with some dummy character.
-    # TODO: Support making the name safe for Windows, too.
-    return name.replace('/', '\\')
+from amass import file_util
 
 
 def get_track_name(track):
@@ -30,7 +19,7 @@ def get_track_name(track):
     else:
         title = track.trackTitle
 
-    return safe_filename('%02d - %s' % (track.number, title))
+    return file_util.safe_filename(u'%02d - %s' % (track.number, title))
 
 
 def rename_files(info_list):

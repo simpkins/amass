@@ -8,6 +8,7 @@ import os
 
 from .. import cdrom
 from .. import cddb
+from .. import file_util
 from .. import mb
 from .. import metadata
 from . import err
@@ -99,7 +100,7 @@ class DirLayout(object):
     layouts.
     """
     def __init__(self, path):
-        self.path = path
+        self.path = file_util.decode_path(path)
 
     def getMetadataDir(self):
         return os.path.join(self.path, 'metadata')
